@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>医療安全インシデント管理システム</title>
+<style>
+:root{
+  --p:#1e6fb5;--pd:#1557a0;--pl:#e8f0fb;
+  --ac:#059669;--dg:#dc2626;--wn:#d97706;
+  --bg:#f0f4fa;--sf:#ffffff;--bd:#c5d4e8;
+  --tx:#1a2a3a;--mt:#5a7080;
+  --sw:230px;--hh:54px;--r:8px;--sh:0 2px 8px rgba(0,0,0,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Meiryo,'ヒラギノ角ゴ Pro',sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
+a{color:var(--p);text-decoration:none}
+button{cursor:pointer;font-family:inherit;font-size:13px}
+input,select,textarea{font-family:inherit;font-size:13px}
+
+/* ===== LOGIN ===== */
+#loginWrap{position:fixed;inset:0;background:linear-gradient(135deg,#1557a0,#1e6fb5,#2980c4);display:flex;align-items:center;justify-content:center;z-index:9999}
+#loginBox{background:#fff;border-radius:14px;padding:40px 36px;width:380px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+#loginBox h1{text-align:center;font-size:17px;color:var(--p);margin-bottom:4px;font-weight:700}
+#loginBox .sub{text-align:center;font-size:12px;color:var(--mt);margin-bottom:24px}
+#loginBox label{display:block;font-size:12px;color:var(--mt);margin-bottom:4px;margin-top:14px}
+#loginBox input{width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:6px;outline:none;transition:border .2s}
+#loginBox input:focus{border-color:var(--p)}
+#loginBox .btn-login{width:100%;margin-top:20px;padding:11px;background:var(--p);color:#fff;border:none;border-radius:7px;font-size:15px;font-weight:700;transition:background .2s}
+#loginBox .btn-login:hover{background:var(--pd)}
+#loginBox .demo{margin-top:16px;background:#f0f4fa;border-radius:7px;padding:10px 12px;font-size:11px;color:var(--mt);line-height:1.7}
+#loginBox .demo b{color:var(--tx)}
+
+/* ===== APP LAYOUT ===== */
+#app{display:none;height:100vh;overflow:hidden}
+#sidebar{position:fixed;left:0;top:0;width:var(--sw);height:100vh;background:linear-gradient(180deg,#1557a0,#0d3d7a);color:#fff;overflow-y:auto;z-index:100;transition:transform .3s}
+#sidebar .logo{padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,.12)}
+#sidebar .logo h2{font-size:13px;font-weight:700;line-height:1.4}
+#sidebar .logo p{font-size:10px;opacity:.7;margin-top:2px}
+#sidebar nav{padding:8px 0}
+#sidebar nav a{display:flex;align-items:center;gap:9px;padding:9px 18px;color:rgba(255,255,255,.85);font-size:13px;transition:background .15s;cursor:pointer}
+#sidebar nav a:hover,#sidebar nav a.active{background:rgba(255,255,255,.15);color:#fff}
+#sidebar nav a .ic{font-size:16px;width:20px;text-align:center}
+#sidebar nav .sep{font-size:10px;color:rgba(255,255,255,.4);padding:10px 18px 3px;letter-spacing:.05em;margin-top:4px}
+#sidebar .uinfo{padding:12px 16px;border-top:1px solid rgba(255,255,255,.12);font-size:12px}
+#sidebar .uinfo .uname{font-weight:700;font-size:13px}
+#sidebar .uinfo .urole{opacity:.7;font-size:11px}
+#sidebar .uinfo .btn-logout{margin-top:8px;padding:5px 12px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:5px;font-size:12px;width:100%}
+
+#main{margin-left:var(--sw);height:100vh;display:flex;flex-direction:column;overflow:hidden;transition:margin .3s}
+#topbar{height:var(--hh);background:#fff;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+#topbar .hbg{display:none;background:none;border:none;font-size:22px;color:var(--tx);padding:4px}
+#topbar .ptitle{font-size:16px;font-weight:700;color:var(--tx)}
+#topbar .badges{margin-left:auto;display:flex;align-items:center;gap:10px}
+#topbar .badge{background:var(--dg);color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700}
+#topbar .badge.y{background:var(--wn)}
+#content{flex:1;overflow-y:auto;padding:20px}
+
+/* ===== CARDS ===== */
+.card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:18px 20px;margin-bottom:16px}
+.card h3{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:16px;text-align:center;border-left:4px solid var(--p)}
+.stat-card.red{border-color:var(--dg)}
+.stat-card.orange{border-color:var(--wn)}
+.stat-card.green{border-color:var(--ac)}
+.stat-card .val{font-size:28px;font-weight:800;color:var(--p);line-height:1}
+.stat-card.red .val{color:var(--dg)}
+.stat-card.orange .val{color:var(--wn)}
+.stat-card.green .val{color:var(--ac)}
+.stat-card .lbl{font-size:11px;color:var(--mt);margin-top:4px}
+
+/* ===== TABLE ===== */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+table th{background:#f0f4fa;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid var(--bd);white-space:nowrap}
+table td{padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+table tr:hover td{background:#f8fafc}
+
+/* ===== BADGES / TAGS ===== */
+.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag.lv0{background:#f0f0f0;color:#555}
+.tag.lv1{background:#dbeafe;color:#1d4ed8}
+.tag.lv2{background:#fef9c3;color:#854d0e}
+.tag.lv3a{background:#fed7aa;color:#c2410c}
+.tag.lv3b{background:#fecaca;color:#b91c1c}
+.tag.lv4a,.tag.lv4b,.tag.lv5{background:#fee2e2;color:#991b1b;font-weight:800}
+.tag.st-new{background:#e0f2fe;color:#075985}
+.tag.st-review{background:#fef9c3;color:#854d0e}
+.tag.st-plan{background:#fde68a;color:#92400e}
+.tag.st-impl{background:#d1fae5;color:#065f46}
+.tag.st-done{background:#dcfce7;color:#14532d}
+.tag.st-reject{background:#f1f5f9;color:#64748b}
+.tag.urgent{background:#fee2e2;color:#dc2626}
+.tag.type-med{background:#ede9fe;color:#5b21b6}
+.tag.type-fall{background:#ffedd5;color:#9a3412}
+.tag.type-dev{background:#e0f2fe;color:#075985}
+.tag.type-tube{background:#fce7f3;color:#9d174d}
+.tag.type-exam{background:#d1fae5;color:#065f46}
+.tag.type-blood{background:#fee2e2;color:#991b1b}
+.tag.type-surg{background:#fef9c3;color:#78350f}
+.tag.type-other{background:#f1f5f9;color:#475569}
+
+/* ===== BUTTONS ===== */
+.btn{padding:7px 14px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-p{background:var(--p);color:#fff}
+.btn-g{background:var(--ac);color:#fff}
+.btn-r{background:var(--dg);color:#fff}
+.btn-o{background:var(--wn);color:#fff}
+.btn-gray{background:#e2e8f0;color:var(--tx)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-outline{background:transparent;border:1.5px solid var(--p);color:var(--p)}
+
+/* ===== FORM ===== */
+.form-row{display:grid;gap:12px;margin-bottom:12px}
+.form-row.col2{grid-template-columns:1fr 1fr}
+.form-row.col3{grid-template-columns:1fr 1fr 1fr}
+.form-group label{display:block;font-size:12px;color:var(--mt);margin-bottom:4px;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 10px;border:1.5px solid var(--bd);border-radius:6px;outline:none;background:#fff;transition:border .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--p)}
+.form-group textarea{resize:vertical;min-height:70px}
+.required::after{content:' *';color:var(--dg)}
+
+/* ===== MODAL ===== */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px}
+.modal{background:#fff;border-radius:12px;width:700px;max-width:98vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2)}
+.modal.lg{width:900px}
+.modal.sm{width:480px}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-head h3{font-size:15px;font-weight:700}
+.modal-head .close{background:none;border:none;font-size:22px;color:var(--mt);cursor:pointer;line-height:1}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap}
+#toast.show{opacity:1}
+#toast.e{background:var(--dg)}
+#toast.s{background:var(--ac)}
+
+/* ===== FILTERS ===== */
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.filter-bar input,.filter-bar select{padding:7px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;background:#fff;min-width:130px}
+
+/* ===== CHART ===== */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-box{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:16px}
+.chart-box h4{font-size:13px;font-weight:700;color:var(--mt);margin-bottom:10px}
+.chart-box canvas{width:100%!important;max-height:200px}
+
+/* ===== RCA ===== */
+.rca-why{display:flex;flex-direction:column;gap:8px}
+.rca-why-row{display:flex;align-items:center;gap:8px}
+.rca-why-row .num{width:32px;height:32px;background:var(--p);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.rca-why-row input{flex:1;padding:8px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px}
+.fishbone{overflow-x:auto;padding:8px 0}
+
+/* ===== BOARD ===== */
+.post-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--p)}
+.post-card.urgent{border-color:var(--dg)}
+.post-card .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.post-card .pt{font-size:14px;font-weight:700}
+.post-card .pm{font-size:12px;color:var(--mt);margin-bottom:6px}
+.post-card .pc{font-size:13px;line-height:1.6;white-space:pre-wrap}
+
+/* ===== WORKFLOW ===== */
+.wf-steps{display:flex;align-items:center;gap:0;margin:12px 0;flex-wrap:wrap}
+.wf-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:80px}
+.wf-step .circle{width:32px;height:32px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--mt)}
+.wf-step.done .circle{background:var(--ac);color:#fff}
+.wf-step.active .circle{background:var(--p);color:#fff}
+.wf-step .slbl{font-size:10px;color:var(--mt);text-align:center;line-height:1.3}
+.wf-arrow{color:var(--bd);font-size:18px;padding:0 4px;margin-top:-16px}
+
+/* ===== MOBILE ===== */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:99}
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-left:0}
+  #topbar .hbg{display:block}
+  #overlay.show{display:block}
+  .chart-grid{grid-template-columns:1fr}
+  .form-row.col2,.form-row.col3{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  #content{padding:12px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ===== MISC ===== */
+.page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.page-head h2{font-size:18px;font-weight:800}
+.empty{text-align:center;padding:40px;color:var(--mt);font-size:14px}
+.comment-list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.comment-item{background:#f8fafc;border-radius:8px;padding:10px 12px;border-left:3px solid var(--p)}
+.comment-item .cm{font-size:12px;color:var(--mt);margin-bottom:4px}
+.comment-item .ct{font-size:13px;line-height:1.5}
+.attach-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.attach-item{background:#f0f4fa;border:1px solid var(--bd);border-radius:6px;padding:6px 10px;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.attach-item:hover{background:var(--pl)}
+.progress-bar{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-top:4px}
+.progress-bar .fill{height:100%;background:var(--p);border-radius:3px;transition:width .4s}
+.divider{border:none;border-top:1px solid var(--bd);margin:14px 0}
+.txt-r{text-align:right}
+.flex-row{display:flex;align-items:center;gap:8px}
+.ml-auto{margin-left:auto}
+.mt8{margin-top:8px}
+.mt12{margin-top:12px}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+ <div id="loginBox">
+  <h1>🏥 医療安全インシデント管理システム</h1>
+  <p class="sub">147床病院 医療安全管理部門</p>
+  <label for="lid">ログインID</label>
+  <input id="lid" type="text" placeholder="例: admin" autocomplete="username">
+  <label for="lpw">パスワード</label>
+  <input id="lpw" type="password" placeholder="パスワードを入力" autocomplete="current-password">
+  <button class="btn-login" onclick="doLogin()">ログイン</button>
+  <div class="demo">
+   <b>デモアカウント</b><br>
+   admin / admin123 ─ 管理者<br>
+   risk_mgr / pass123 ─ リスクマネジャー<br>
+   head_nurse / pass123 ─ 看護部長<br>
+   nurse1 / pass123 ─ 看護師<br>
+   dr_ito / pass123 ─ 医師
+  </div>
+ </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+ <div id="overlay" onclick="closeSidebar()"></div>
+ <div id="sidebar">
+  <div class="logo">
+   <h2>🏥 医療安全<br>インシデント管理</h2>
+   <p>147床病院</p>
+  </div>
+  <nav id="sidenav">
+   <a onclick="go('home')"><span class="ic">🏠</span>ダッシュボード</a>
+   <div class="sep">インシデント</div>
+   <a onclick="go('report')"><span class="ic">📝</span>新規報告</a>
+   <a onclick="go('incidents')"><span class="ic">📋</span>インシデント一覧</a>
+   <a onclick="go('workflow')"><span class="ic">✅</span>承認ワークフロー</a>
+   <div class="sep">分析・統計</div>
+   <a onclick="go('analysis')"><span class="ic">📊</span>統計・分析</a>
+   <a onclick="go('rca')"><span class="ic">🔍</span>RCA・根本原因分析</a>
+   <div class="sep">情報共有</div>
+   <a onclick="go('board')"><span class="ic">📢</span>安全情報掲示板</a>
+   <a onclick="go('news')"><span class="ic">📰</span>医療安全ニュース</a>
+   <div class="sep">管理</div>
+   <a onclick="go('export')"><span class="ic">📤</span>外部連携・出力</a>
+   <a onclick="go('staff')"><span class="ic">👥</span>職員マスター</a>
+   <a onclick="go('log')"><span class="ic">🔒</span>操作ログ</a>
+   <a onclick="go('settings')"><span class="ic">⚙️</span>システム設定</a>
+  </nav>
+  <div class="uinfo">
+   <div class="uname" id="sideUname"></div>
+   <div class="urole" id="sideUrole"></div>
+   <button class="btn-logout" onclick="doLogout()">ログアウト</button>
+  </div>
+ </div>
+ <div id="main">
+  <div id="topbar">
+   <button class="hbg" onclick="toggleSidebar()">☰</button>
+   <span class="ptitle" id="ptitle">ダッシュボード</span>
+   <div class="badges">
+    <span class="badge red" id="badgeNew" style="display:none"></span>
+    <span class="badge y" id="badgePending" style="display:none"></span>
+   </div>
+  </div>
+  <div id="content"></div>
+ </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal" style="display:none" onclick="modalOvClick(event)">
+ <div class="modal" id="modalBox">
+  <div class="modal-head">
+   <h3 id="modalTitle"></h3>
+   <button class="close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body" id="modalBody"></div>
+  <div class="modal-foot" id="modalFoot"></div>
+ </div>
+</div>
+
+
+</html>
+<script>
+
+// ===== DB LAYER =====
+var DB = {
+  get: function(k) {
+    try { var v = localStorage.getItem('im_'+k); return v !== null ? JSON.parse(v) : null; }
+    catch(e) { return null; }
+  },
+  set: function(k, v) {
+    try { localStorage.setItem('im_'+k, JSON.stringify(v)); }
+    catch(e) { toast('ストレージ容量不足の可能性があります','e'); }
+  },
+  def: function(k, v) { if (this.get(k) === null) this.set(k, v); return this.get(k); }
+};
+
+var CU = null; // current user
+
+// ===== TOAST =====
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' '+type : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.className = ''; }, 2800);
+}
+
+// ===== MODAL =====
+function openModal(title, body, foot, size) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalFoot').innerHTML = foot || '';
+  var box = document.getElementById('modalBox');
+  box.className = 'modal' + (size ? ' '+size : '');
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+function modalOvClick(e) { if (e.target.id === 'modal') closeModal(); }
+
+// ===== SIDEBAR =====
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ===== NAVIGATION =====
+var PAGE_TITLES = {
+  home:'ダッシュボード', report:'新規インシデント報告', incidents:'インシデント一覧',
+  workflow:'承認ワークフロー', analysis:'統計・分析', rca:'RCA・根本原因分析',
+  board:'安全情報掲示板', news:'医療安全ニュース', export:'外部連携・出力',
+  staff:'職員マスター', log:'操作ログ', settings:'システム設定'
+};
+function go(page) {
+  document.getElementById('ptitle').textContent = PAGE_TITLES[page] || page;
+  document.querySelectorAll('#sidenav a').forEach(function(a) { a.classList.remove('active'); });
+  var links = document.querySelectorAll('#sidenav a');
+  for (var i = 0; i < links.length; i++) {
+    if (links[i].getAttribute('onclick') === "go('"+page+"')") {
+      links[i].classList.add('active'); break;
+    }
+  }
+  closeSidebar();
+  var el = document.getElementById('content');
+  if (page === 'home') renderHome(el);
+  else if (page === 'report') renderReport(el);
+  else if (page === 'incidents') renderIncidents(el);
+  else if (page === 'workflow') renderWorkflow(el);
+  else if (page === 'analysis') renderAnalysis(el);
+  else if (page === 'rca') renderRCA(el);
+  else if (page === 'board') renderBoard(el);
+  else if (page === 'news') renderNews(el);
+  else if (page === 'export') renderExport(el);
+  else if (page === 'staff') renderStaff(el);
+  else if (page === 'log') renderLog(el);
+  else if (page === 'settings') renderSettings(el);
+}
+
+// ===== AUTH =====
+function doLogin() {
+  var id = document.getElementById('lid').value.trim();
+  var pw = document.getElementById('lpw').value.trim();
+  if (!id || !pw) { toast('IDとパスワードを入力してください','e'); return; }
+  var users = DB.get('users');
+  if (!users || !Array.isArray(users)) { toast('データエラー','e'); return; }
+  var found = null;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].loginId === id && users[i].password === pw) { found = users[i]; break; }
+  }
+  if (!found) { toast('IDまたはパスワードが正しくありません','e'); return; }
+  CU = found;
+  DB.set('session', found.id);
+  addLog('ログイン', '成功: '+found.name);
+  startApp();
+}
+function doLogout() {
+  addLog('ログアウト', CU ? CU.name : '');
+  CU = null;
+  DB.set('session', null);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginWrap').style.display = 'flex';
+}
+function startApp() {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sideUname').textContent = CU.name;
+  document.getElementById('sideUrole').textContent = CU.roleName + ' / ' + CU.dept;
+  go('home');
+  updateBadges();
+}
+function updateBadges() {
+  var incs = DB.get('incidents') || [];
+  var newCount = 0; var pendCount = 0;
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].status === 'new') newCount++;
+    if (incs[i].status === 'review' || incs[i].status === 'plan') pendCount++;
+  }
+  var bn = document.getElementById('badgeNew');
+  var bp = document.getElementById('badgePending');
+  if (newCount > 0) { bn.textContent = '新規 '+newCount; bn.style.display = ''; }
+  else { bn.style.display = 'none'; }
+  if (pendCount > 0) { bp.textContent = '対応中 '+pendCount; bp.style.display = ''; }
+  else { bp.style.display = 'none'; }
+}
+
+// ===== LOGGING =====
+function addLog(action, detail) {
+  var logs = DB.get('logs') || [];
+  logs.unshift({ id: Date.now(), ts: Date.now(), userId: CU ? CU.id : 0,
+    userName: CU ? CU.name : 'システム', action: action, detail: detail || '' });
+  if (logs.length > 1000) logs = logs.slice(0, 1000);
+  DB.set('logs', logs);
+}
+
+// ===== HELPERS =====
+function uid() { return Date.now() + Math.floor(Math.random()*1000); }
+function fmtDate(ts) {
+  var d = new Date(ts);
+  return d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0');
+}
+function fmtDateTime(ts) {
+  var d = new Date(ts);
+  return fmtDate(ts)+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+}
+function today() { return new Date().toISOString().slice(0,10); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+var LEVELS = {
+  lv0:'レベル0（ヒヤリハット）',lv1:'レベル1（影響なし）',lv2:'レベル2（経過観察）',
+  lv3a:'レベル3a（簡易処置）',lv3b:'レベル3b（高度処置）',
+  lv4a:'レベル4a（永続障害・軽）',lv4b:'レベル4b（永続障害・重）',lv5:'レベル5（死亡）'
+};
+var STATUSES = {
+  new:'未確認', review:'確認中', plan:'対策立案中', impl:'対策実施中', done:'完了', reject:'棄却'
+};
+var TYPES = {
+  med:'薬剤', fall:'転倒・転落', dev:'医療機器', tube:'チューブ類',
+  exam:'検査・処置', blood:'輸血', surg:'手術', other:'その他'
+};
+var DEPTS = ['内科','外科','整形外科','産婦人科','小児科','ICU','手術室','放射線科','リハビリ科','薬剤部','検査部','看護部','事務部'];
+
+// ===== TEMPLATES (incident type specific fields) =====
+var TEMPLATES = {
+  med: [
+    {id:'drug_name', label:'薬剤名', type:'text', required:true},
+    {id:'drug_dose', label:'投与量・濃度', type:'text'},
+    {id:'drug_route', label:'投与経路', type:'select', opts:['経口','静脈内','筋肉内','皮下','外用','その他']},
+    {id:'drug_error', label:'エラー区分', type:'select', opts:['処方エラー','調剤エラー','与薬エラー','管理エラー','その他']},
+    {id:'drug_double', label:'ダブルチェック実施', type:'select', opts:['実施','未実施','不明']}
+  ],
+  fall: [
+    {id:'fall_loc', label:'転倒場所', type:'select', opts:['病室','廊下','トイレ','浴室','処置室','病室外','その他']},
+    {id:'fall_posture', label:'転倒時体位', type:'select', opts:['立位','歩行中','起立時','移乗中','その他']},
+    {id:'fall_injury', label:'受傷の有無', type:'select', opts:['なし','擦り傷','打撲','骨折','頭部外傷','その他']},
+    {id:'fall_rail', label:'ベッド柵状態', type:'select', opts:['上げていた','下げていた','一部上げ','不明']},
+    {id:'fall_call', label:'コール対応', type:'select', opts:['コールなし','コールあり（対応済）','コールあり（未対応）','不明']}
+  ],
+  dev: [
+    {id:'dev_name', label:'機器名称・型番', type:'text', required:true},
+    {id:'dev_asset', label:'管理番号', type:'text'},
+    {id:'dev_error', label:'エラー区分', type:'select', opts:['操作ミス','機器不具合','設定エラー','アラーム対応遅延','その他']},
+    {id:'dev_check', label:'点検状況', type:'select', opts:['点検済','未点検','点検中','不明']},
+    {id:'dev_alarm', label:'アラーム設定', type:'select', opts:['適切','不適切','不明']}
+  ],
+  tube: [
+    {id:'tube_type', label:'チューブ種別', type:'select', opts:['中心静脈カテーテル','末梢静脈カテーテル','気管内チューブ','胃管','尿道カテーテル','ドレーン','その他']},
+    {id:'tube_error', label:'エラー区分', type:'select', opts:['自己抜去','事故抜去','閉塞','位置異常','誤接続','その他']},
+    {id:'tube_insert_dt', label:'挿入日', type:'date'},
+    {id:'tube_fix', label:'固定状態', type:'select', opts:['良好','不良','不明']},
+    {id:'tube_confirm', label:'位置確認', type:'select', opts:['実施','未実施','不明']}
+  ],
+  exam: [
+    {id:'exam_name', label:'検査・処置名', type:'text', required:true},
+    {id:'exam_error', label:'エラー区分', type:'select', opts:['患者誤認','部位誤り','方法誤り','準備不足','その他']},
+    {id:'exam_consent', label:'インフォームドコンセント', type:'select', opts:['取得済','未取得','不明']}
+  ],
+  blood: [
+    {id:'blood_type', label:'血液型', type:'text'},
+    {id:'blood_product', label:'血液製剤種別', type:'select', opts:['赤血球製剤','血小板製剤','新鮮凍結血漿','その他']},
+    {id:'blood_error', label:'エラー区分', type:'select', opts:['血液型不一致','患者誤認','交差試験未実施','投与速度誤り','その他']},
+    {id:'blood_double', label:'ダブルチェック', type:'select', opts:['実施','未実施','不明']}
+  ],
+  surg: [
+    {id:'surg_name', label:'手術名', type:'text'},
+    {id:'surg_site', label:'手術部位', type:'text'},
+    {id:'surg_error', label:'エラー区分', type:'select', opts:['部位誤り','患者誤認','器具遺残','その他']},
+    {id:'surg_checklist', label:'術前チェックリスト', type:'select', opts:['実施','未実施','不明']}
+  ],
+  other: [
+    {id:'other_category', label:'詳細カテゴリ', type:'text'}
+  ]
+};
+
+// ===== INIT DATA =====
+function initData() {
+  DB.def('users', [
+    {id:1, loginId:'admin', password:'admin123', name:'管理者 太郎', roleName:'管理者', role:'admin', dept:'医療安全管理部'},
+    {id:2, loginId:'risk_mgr', password:'pass123', name:'田中 安全子', roleName:'リスクマネジャー', role:'risk', dept:'医療安全管理部'},
+    {id:3, loginId:'head_nurse', password:'pass123', name:'山田 花子', roleName:'看護部長', role:'manager', dept:'看護部'},
+    {id:4, loginId:'nurse1', password:'pass123', name:'佐藤 美咲', roleName:'看護師', role:'staff', dept:'内科'},
+    {id:5, loginId:'dr_ito', password:'pass123', name:'伊藤 一郎', roleName:'医師', role:'doctor', dept:'内科'}
+  ]);
+  var now = Date.now();
+  var day = 86400000;
+  DB.def('incidents', [
+    {id:101, no:'INC-2026-001', date:'2026-05-01', time:'10:30', occDate:now-17*day, reportDate:now-17*day,
+     reporterId:4, reporterName:'佐藤 美咲', dept:'内科', type:'med', level:'lv2', status:'done',
+     patientId:'P001234', patientName:'患者A', patientAge:72, patientGender:'男性',
+     location:'内科病棟4F 403号室', title:'経口薬の投与量誤り', desc:'朝食後薬を誤って2倍量投与してしまった。患者は経過観察となり問題なし。',
+     typeFields:{drug_name:'アムロジピン5mg', drug_dose:'10mg（2錠）', drug_route:'経口', drug_error:'与薬エラー', drug_double:'未実施'},
+     attachments:[], comments:[{id:1, userId:2, userName:'田中 安全子', ts:now-16*day, text:'確認しました。ダブルチェック徹底をお願いします。'}],
+     workflow:{step:3, steps:['報告','確認','対策','完了'], approvals:[{step:1,userId:2,ts:now-16*day},{step:2,userId:2,ts:now-15*day},{step:3,userId:1,ts:now-14*day}]},
+     measures:'ダブルチェックルールを再周知。投薬確認表を改訂。', rootCause:'確認手順の省略', rcaId:null},
+    {id:102, no:'INC-2026-002', date:'2026-05-05', time:'14:15', occDate:now-13*day, reportDate:now-13*day,
+     reporterId:4, reporterName:'佐藤 美咲', dept:'内科', type:'fall', level:'lv3a', status:'impl',
+     patientId:'P002345', patientName:'患者B', patientAge:81, patientGender:'女性',
+     location:'内科病棟4F トイレ前廊下', title:'夜間のトイレ歩行中に転倒', desc:'夜間2時頃、患者がナースコールを押さずにトイレへ向かった際に転倒。右膝に打撲あり、包帯処置実施。',
+     typeFields:{fall_loc:'廊下', fall_posture:'歩行中', fall_injury:'打撲', fall_rail:'上げていた', fall_call:'コールなし'},
+     attachments:[], comments:[{id:2, userId:2, userName:'田中 安全子', ts:now-12*day, text:'転倒リスク評価を見直してください。センサーマットの検討も。'}],
+     workflow:{step:2, steps:['報告','確認','対策','完了'], approvals:[{step:1,userId:2,ts:now-12*day},{step:2,userId:3,ts:now-11*day}]},
+     measures:'転倒リスク患者へのセンサーマット設置。夜間巡回回数増加。', rootCause:'', rcaId:null},
+    {id:103, no:'INC-2026-003', date:'2026-05-08', time:'09:00', occDate:now-10*day, reportDate:now-10*day,
+     reporterId:5, reporterName:'伊藤 一郎', dept:'内科', type:'tube', level:'lv1', status:'review',
+     patientId:'P003456', patientName:'患者C', patientAge:65, patientGender:'男性',
+     location:'内科病棟4F 405号室', title:'末梢静脈カテーテル自己抜去', desc:'リハビリ後、患者が左腕の点滴ルートを自己抜去。再挿入実施。出血は圧迫止血で対応。',
+     typeFields:{tube_type:'末梢静脈カテーテル', tube_error:'自己抜去', tube_insert_dt:'2026-05-06', tube_fix:'良好', tube_confirm:'実施'},
+     attachments:[], comments:[],
+     workflow:{step:1, steps:['報告','確認','対策','完了'], approvals:[{step:1,userId:2,ts:now-9*day}]},
+     measures:'', rootCause:'', rcaId:null},
+    {id:104, no:'INC-2026-004', date:'2026-05-12', time:'16:45', occDate:now-6*day, reportDate:now-6*day,
+     reporterId:4, reporterName:'佐藤 美咲', dept:'内科', type:'dev', level:'lv2', status:'plan',
+     patientId:'P004567', patientName:'患者D', patientAge:58, patientGender:'女性',
+     location:'内科病棟4F 処置室', title:'輸液ポンプのアラーム対応遅延', desc:'輸液ポンプの閉塞アラームが10分以上対応されなかった。患者への実害はなかったが、投与量に遅れが生じた。',
+     typeFields:{dev_name:'テルフュージョン輸液ポンプ', dev_asset:'DEV-0045', dev_error:'アラーム対応遅延', dev_check:'点検済', dev_alarm:'適切'},
+     attachments:[], comments:[{id:3, userId:2, userName:'田中 安全子', ts:now-5*day, text:'アラーム対応マニュアルの再確認と教育実施をお願いします。'}],
+     workflow:{step:1, steps:['報告','確認','対策','完了'], approvals:[{step:1,userId:2,ts:now-5*day}]},
+     measures:'アラーム対応マニュアル見直し中。', rootCause:'', rcaId:null},
+    {id:105, no:'INC-2026-005', date:'2026-05-15', time:'11:20', occDate:now-3*day, reportDate:now-3*day,
+     reporterId:4, reporterName:'佐藤 美咲', dept:'内科', type:'med', level:'lv0', status:'new',
+     patientId:'P005678', patientName:'患者E', patientAge:44, patientGender:'男性',
+     location:'内科病棟4F ナースステーション', title:'投薬準備中に取り違えに気づいた（ヒヤリ）', desc:'投薬準備中に、患者名を確認したところ別患者分の薬を準備していることに気づいた。実施前に気づき、患者への影響はなし。',
+     typeFields:{drug_name:'メトホルミン500mg', drug_dose:'500mg', drug_route:'経口', drug_error:'与薬エラー', drug_double:'実施'},
+     attachments:[], comments:[],
+     workflow:{step:0, steps:['報告','確認','対策','完了'], approvals:[]},
+     measures:'', rootCause:'', rcaId:null}
+  ]);
+  DB.def('board_posts', [
+    {id:1, date:now-5*day, title:'【緊急】転倒転落防止の徹底について', content:'5月に入り転倒事例が増加しています。リスクアセスメントの実施と、ハイリスク患者へのセンサーマット設置を徹底してください。\n\n詳細は安全管理室まで問い合わせください。', urgent:true, author:'田中 安全子', reads:12},
+    {id:2, date:now-10*day, title:'薬剤ダブルチェックルール改訂のお知らせ', content:'5月1日より薬剤ダブルチェックのルールが改訂されました。\n・ハイアラート薬は必ず2名チェック\n・電子カルテでの確認画面を追加\n詳細はマニュアル5版を参照してください。', urgent:false, author:'管理者 太郎', reads:28},
+    {id:3, date:now-20*day, title:'医療安全研修（5月）のご案内', content:'5月28日（木）14:00より、医療安全研修を開催します。\n対象：全職員\n場所：大会議室\nテーマ：インシデントから学ぶ安全文化', urgent:false, author:'田中 安全子', reads:45}
+  ]);
+  DB.def('news', [
+    {id:1, date:now-8*day, title:'2026年4月 医療安全ニュース Vol.14', content:'【今月のインシデント概要】\n4月の報告件数：8件（薬剤3件、転倒2件、チューブ1件、その他2件）\n\n【重点対策】\n・薬剤エラー防止：投薬5R（正しい患者・薬・用量・時間・方法）の徹底\n・転倒予防：アセスメントスコア見直し\n\n【今後の取り組み】\nRCA実施による根本原因の追究と再発防止策の水平展開を進めます。', author:'田中 安全子', incidentIds:[]}
+  ]);
+  DB.def('rca_list', []);
+  DB.def('logs', []);
+  DB.def('settings', {
+    hospitalName:'147床 サンプル病院', dept:'医療安全管理部門',
+    director:'田中 安全子', reportingUrl:'https://www.med-safe.jp/',
+    autoNews:true, sessionTimeout:60
+  });
+}
+
+// ===== HOME =====
+function renderHome(el) {
+  var incs = DB.get('incidents') || [];
+  var total = incs.length;
+  var newC = 0, highC = 0, openC = 0;
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].status === 'new') newC++;
+    if (incs[i].level === 'lv3b' || incs[i].level === 'lv4a' || incs[i].level === 'lv4b' || incs[i].level === 'lv5') highC++;
+    if (incs[i].status !== 'done' && incs[i].status !== 'reject') openC++;
+  }
+  var recent = incs.slice(0, 5);
+  var rows = '';
+  for (var j = 0; j < recent.length; j++) {
+    var inc = recent[j];
+    rows += '<tr onclick="viewIncident('+inc.id+')" style="cursor:pointer">'
+      + '<td><b>'+escHtml(inc.no)+'</b></td>'
+      + '<td>'+escHtml(inc.date)+'</td>'
+      + '<td><span class="tag type-'+inc.type+'">'+escHtml(TYPES[inc.type])+'</span></td>'
+      + '<td>'+escHtml(inc.title)+'</td>'
+      + '<td><span class="tag '+inc.level+'">'+escHtml(LEVELS[inc.level])+'</span></td>'
+      + '<td><span class="tag st-'+inc.status+'">'+escHtml(STATUSES[inc.status])+'</span></td>'
+      + '</tr>';
+  }
+  var posts = DB.get('board_posts') || [];
+  var postHtml = '';
+  for (var p = 0; p < Math.min(3, posts.length); p++) {
+    var post = posts[p];
+    postHtml += '<div class="post-card'+(post.urgent?' urgent':'')+'"><div class="ph">'
+      + '<span class="pt">'+escHtml(post.title)+'</span>'
+      + (post.urgent?'<span class="tag urgent">緊急</span>':'')
+      + '</div><div class="pm">'+escHtml(post.author)+' ／ '+fmtDate(post.date)+'</div></div>';
+  }
+  el.innerHTML = '<div class="stat-grid">'
+    + '<div class="stat-card red"><div class="val">'+newC+'</div><div class="lbl">未確認インシデント</div></div>'
+    + '<div class="stat-card orange"><div class="val">'+openC+'</div><div class="lbl">対応中</div></div>'
+    + '<div class="stat-card red"><div class="val">'+highC+'</div><div class="lbl">重大インシデント</div></div>'
+    + '<div class="stat-card"><div class="val">'+total+'</div><div class="lbl">総報告件数</div></div>'
+    + '</div>'
+    + '<div class="card"><h3>📋 最近のインシデント</h3>'
+    + '<div class="tbl-wrap"><table><thead><tr><th>No</th><th>発生日</th><th>種別</th><th>タイトル</th><th>レベル</th><th>ステータス</th></tr></thead>'
+    + '<tbody>'+rows+'</tbody></table></div>'
+    + '<div class="mt8 txt-r"><button class="btn btn-p btn-sm" onclick="go(\'incidents\')">一覧を見る</button></div></div>'
+    + '<div class="card"><h3>📢 安全情報掲示板（最新）</h3>'+postHtml
+    + '<div class="mt8 txt-r"><button class="btn btn-p btn-sm" onclick="go(\'board\')">掲示板を見る</button></div></div>';
+}
+
+// ===== REPORT =====
+var pendFiles = [];
+function renderReport(el) {
+  el.innerHTML = '<div class="page-head"><h2>📝 新規インシデント報告</h2></div>'
+    + '<div class="card"><form id="rptForm" onsubmit="return false">'
+    + '<!-- Step1: 基本情報 -->'
+    + '<div class="card" style="background:#f8fafc;box-shadow:none;border:1px solid var(--bd)">'
+    + '<h3>🔵 基本情報</h3>'
+    + '<div class="form-row col3">'
+    + '<div class="form-group"><label class="required">発生日</label><input type="date" id="r_date" value="'+today()+'"></div>'
+    + '<div class="form-group"><label class="required">発生時刻</label><input type="time" id="r_time"></div>'
+    + '<div class="form-group"><label class="required">発生部署</label><select id="r_dept">'+DEPTS.map(function(d){return '<option>'+d+'</option>';}).join('')+'</select></div>'
+    + '</div>'
+    + '<div class="form-row col3">'
+    + '<div class="form-group"><label>患者ID</label><input type="text" id="r_pid" placeholder="例: P001234"></div>'
+    + '<div class="form-group"><label>患者氏名</label><input type="text" id="r_pname" placeholder="（任意）匿名可"></div>'
+    + '<div class="form-group"><label>年齢</label><input type="number" id="r_page" min="0" max="150"></div>'
+    + '</div>'
+    + '<div class="form-row col2">'
+    + '<div class="form-group"><label>性別</label><select id="r_pgender"><option>男性</option><option>女性</option><option>その他</option><option>不明</option></select></div>'
+    + '<div class="form-group"><label class="required">発生場所</label><input type="text" id="r_loc" placeholder="例: 内科病棟4F 403号室"></div>'
+    + '</div>'
+    + '</div>'
+    + '<div class="card" style="background:#f8fafc;box-shadow:none;border:1px solid var(--bd);margin-top:12px">'
+    + '<h3>🔴 インシデント情報</h3>'
+    + '<div class="form-row col2">'
+    + '<div class="form-group"><label class="required">種別テンプレート</label>'
+    + '<select id="r_type" onchange="updateTemplate()">'+Object.keys(TYPES).map(function(k){return '<option value="'+k+'">'+TYPES[k]+'</option>';}).join('')+'</select></div>'
+    + '<div class="form-group"><label class="required">レベル</label>'
+    + '<select id="r_level">'+Object.keys(LEVELS).map(function(k){return '<option value="'+k+'">'+LEVELS[k]+'</option>';}).join('')+'</select></div>'
+    + '</div>'
+    + '<div class="form-group"><label class="required">タイトル（件名）</label><input type="text" id="r_title" placeholder="例: 経口薬の投与量誤り"></div>'
+    + '<div class="form-group mt8"><label class="required">発生状況の詳細</label><textarea id="r_desc" rows="4" placeholder="何が、いつ、どこで、どのように発生したかを具体的に記述してください"></textarea></div>'
+    + '</div>'
+    + '<div id="tmplFields" class="card" style="background:#fffbea;box-shadow:none;border:1px solid #fcd34d;margin-top:12px">'
+    + '<h3>⚡ 種別別詳細項目（薬剤）</h3>'
+    + '<div id="tmplFieldsInner"></div>'
+    + '</div>'
+    + '<div class="card" style="background:#f8fafc;box-shadow:none;border:1px solid var(--bd);margin-top:12px">'
+    + '<h3>📎 写真・ファイル添付</h3>'
+    + '<input type="file" id="r_files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="onFileSelect(event)" style="margin-bottom:8px">'
+    + '<div id="pendFilesPreview"></div>'
+    + '</div>'
+    + '<div class="form-group mt12"><label>初期対応・処置内容</label><textarea id="r_action" rows="3" placeholder="発生直後に行った対応を記述してください"></textarea></div>'
+    + '<div class="modal-foot" style="padding:0;margin-top:16px"><button class="btn btn-p" onclick="submitReport()">📤 報告を送信</button><button class="btn btn-gray" onclick="go(\'home\')">キャンセル</button></div>'
+    + '</form></div>';
+  updateTemplate();
+}
+
+function updateTemplate() {
+  var type = document.getElementById('r_type').value;
+  var fields = TEMPLATES[type] || [];
+  var titles = {med:'薬剤',fall:'転倒・転落',dev:'医療機器',tube:'チューブ類',exam:'検査・処置',blood:'輸血',surg:'手術',other:'その他'};
+  document.querySelector('#tmplFields h3').textContent = '⚡ 種別別詳細項目（'+titles[type]+'）';
+  var html = '<div class="form-row col2">';
+  for (var i = 0; i < fields.length; i++) {
+    var f = fields[i];
+    html += '<div class="form-group"><label'+(f.required?' class="required"':'')+'>'+f.label+'</label>';
+    if (f.type === 'select') {
+      html += '<select id="tmpl_'+f.id+'"><option value="">選択</option>'+f.opts.map(function(o){return '<option>'+o+'</option>';}).join('')+'</select>';
+    } else if (f.type === 'date') {
+      html += '<input type="date" id="tmpl_'+f.id+'">';
+    } else {
+      html += '<input type="text" id="tmpl_'+f.id+'" placeholder="入力">';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('tmplFieldsInner').innerHTML = html;
+}
+
+function onFileSelect(e) {
+  pendFiles = [];
+  var files = Array.from(e.target.files);
+  var done = 0;
+  if (!files.length) { document.getElementById('pendFilesPreview').innerHTML = ''; return; }
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      pendFiles.push({name:file.name, size:file.size, type:file.name.split('.').pop().toLowerCase(), dataUrl:ev.target.result});
+      done++;
+      if (done === files.length) showPendPreview();
+    };
+    reader.onerror = function() {
+      pendFiles.push({name:file.name, size:file.size, type:file.name.split('.').pop().toLowerCase(), dataUrl:''});
+      done++;
+      if (done === files.length) showPendPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showPendPreview() {
+  var html = '<div class="attach-list">';
+  for (var i = 0; i < pendFiles.length; i++) {
+    var f = pendFiles[i];
+    var isImg = ['jpg','jpeg','png','gif','webp'].indexOf(f.type) >= 0;
+    if (isImg && f.dataUrl) {
+      html += '<div class="attach-item"><img src="'+f.dataUrl+'" style="height:40px;border-radius:4px"> '+escHtml(f.name)+'</div>';
+    } else {
+      html += '<div class="attach-item">📄 '+escHtml(f.name)+'</div>';
+    }
+  }
+  html += '</div>';
+  document.getElementById('pendFilesPreview').innerHTML = html;
+}
+
+function submitReport() {
+  var date = document.getElementById('r_date').value;
+  var time = document.getElementById('r_time').value;
+  var dept = document.getElementById('r_dept').value;
+  var title = document.getElementById('r_title').value.trim();
+  var desc = document.getElementById('r_desc').value.trim();
+  var type = document.getElementById('r_type').value;
+  var level = document.getElementById('r_level').value;
+  var loc = document.getElementById('r_loc').value.trim();
+  if (!date || !title || !desc || !loc) { toast('必須項目を入力してください','e'); return; }
+  var typeFields = {};
+  var tfields = TEMPLATES[type] || [];
+  for (var i = 0; i < tfields.length; i++) {
+    var el = document.getElementById('tmpl_'+tfields[i].id);
+    if (el) typeFields[tfields[i].id] = el.value;
+  }
+  var incs = DB.get('incidents') || [];
+  var newNo = 'INC-'+new Date().getFullYear()+'-'+String(incs.length+1).padStart(3,'0');
+  var inc = {
+    id: uid(), no: newNo, date: date, time: time, occDate: Date.now(), reportDate: Date.now(),
+    reporterId: CU.id, reporterName: CU.name, dept: dept, type: type, level: level,
+    status: 'new', patientId: document.getElementById('r_pid').value.trim(),
+    patientName: document.getElementById('r_pname').value.trim(),
+    patientAge: parseInt(document.getElementById('r_page').value) || null,
+    patientGender: document.getElementById('r_pgender').value,
+    location: loc, title: title, desc: desc, typeFields: typeFields,
+    attachments: pendFiles.slice(), comments: [],
+    workflow: {step:0, steps:['報告','確認','対策','完了'], approvals:[]},
+    measures: '', rootCause: '', rcaId: null,
+    initialAction: document.getElementById('r_action').value.trim()
+  };
+  incs.unshift(inc);
+  DB.set('incidents', incs);
+  pendFiles = [];
+  addLog('インシデント報告', inc.no+' '+inc.title);
+  toast('報告を送信しました','s');
+  updateBadges();
+  go('incidents');
+}
+
+// ===== INCIDENTS LIST =====
+function renderIncidents(el) {
+  var incs = DB.get('incidents') || [];
+  el.innerHTML = '<div class="page-head"><h2>📋 インシデント一覧</h2>'
+    + '<button class="btn btn-p" onclick="go(\'report\')">＋ 新規報告</button></div>'
+    + '<div class="filter-bar">'
+    + '<input type="text" id="f_kw" placeholder="🔍 キーワード検索" oninput="filterIncs()">'
+    + '<select id="f_type" onchange="filterIncs()"><option value="">種別：全て</option>'+Object.keys(TYPES).map(function(k){return '<option value="'+k+'">'+TYPES[k]+'</option>';}).join('')+'</select>'
+    + '<select id="f_status" onchange="filterIncs()"><option value="">状況：全て</option>'+Object.keys(STATUSES).map(function(k){return '<option value="'+k+'">'+STATUSES[k]+'</option>';}).join('')+'</select>'
+    + '<select id="f_level" onchange="filterIncs()"><option value="">重要度：全て</option>'+Object.keys(LEVELS).map(function(k){return '<option value="'+k+'">'+LEVELS[k]+'</option>';}).join('')+'</select>'
+    + '<select id="f_dept" onchange="filterIncs()"><option value="">部署：全て</option>'+DEPTS.map(function(d){return '<option>'+d+'</option>';}).join('')+'</select>'
+    + '</div>'
+    + '<div class="card" style="padding:0"><div class="tbl-wrap" id="incTable"></div></div>';
+  filterIncs();
+}
+
+function filterIncs() {
+  var incs = DB.get('incidents') || [];
+  var kw = (document.getElementById('f_kw')||{value:''}).value.toLowerCase();
+  var ft = (document.getElementById('f_type')||{value:''}).value;
+  var fs = (document.getElementById('f_status')||{value:''}).value;
+  var fl = (document.getElementById('f_level')||{value:''}).value;
+  var fd = (document.getElementById('f_dept')||{value:''}).value;
+  var filtered = incs.filter(function(inc) {
+    if (ft && inc.type !== ft) return false;
+    if (fs && inc.status !== fs) return false;
+    if (fl && inc.level !== fl) return false;
+    if (fd && inc.dept !== fd) return false;
+    if (kw) {
+      var haystack = (inc.no+inc.title+inc.desc+inc.patientName+inc.location).toLowerCase();
+      if (haystack.indexOf(kw) < 0) return false;
+    }
+    return true;
+  });
+  var rows = '';
+  for (var i = 0; i < filtered.length; i++) {
+    var inc = filtered[i];
+    rows += '<tr onclick="viewIncident('+inc.id+')" style="cursor:pointer">'
+      + '<td><b style="color:var(--p)">'+escHtml(inc.no)+'</b></td>'
+      + '<td>'+escHtml(inc.date)+'<br><small style="color:var(--mt)">'+escHtml(inc.time||'')+'</small></td>'
+      + '<td><span class="tag type-'+inc.type+'">'+escHtml(TYPES[inc.type])+'</span></td>'
+      + '<td>'+escHtml(inc.title)+'<br><small style="color:var(--mt)">'+escHtml(inc.dept)+'</small></td>'
+      + '<td><span class="tag '+inc.level+'">'+escHtml(LEVELS[inc.level])+'</span></td>'
+      + '<td><span class="tag st-'+inc.status+'">'+escHtml(STATUSES[inc.status])+'</span></td>'
+      + '<td>'+escHtml(inc.reporterName)+'</td>'
+      + '<td>'
+      + '<button class="btn btn-p btn-sm" onclick="event.stopPropagation();viewIncident('+inc.id+')">詳細</button> '
+      + (canEdit()? '<button class="btn btn-gray btn-sm" onclick="event.stopPropagation();editStatus('+inc.id+')">状態変更</button>':'')
+      + '</td>'
+      + '</tr>';
+  }
+  var html = filtered.length === 0
+    ? '<div class="empty">該当するインシデントがありません</div>'
+    : '<table><thead><tr><th>No</th><th>発生日時</th><th>種別</th><th>タイトル/部署</th><th>レベル</th><th>状況</th><th>報告者</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  var el = document.getElementById('incTable');
+  if (el) el.innerHTML = html;
+}
+
+function canEdit() { return CU && (CU.role === 'admin' || CU.role === 'risk' || CU.role === 'manager'); }
+
+function viewIncident(id) {
+  var incs = DB.get('incidents') || [];
+  var inc = null;
+  for (var i = 0; i < incs.length; i++) { if (incs[i].id === id) { inc = incs[i]; break; } }
+  if (!inc) return;
+  addLog('インシデント参照', inc.no+' '+inc.title);
+  var tfields = TEMPLATES[inc.type] || [];
+  var tfHtml = '';
+  for (var j = 0; j < tfields.length; j++) {
+    var f = tfields[j];
+    var val = inc.typeFields ? (inc.typeFields[f.id] || '—') : '—';
+    tfHtml += '<div style="margin-bottom:6px"><small style="color:var(--mt)">'+escHtml(f.label)+'</small><div>'+escHtml(val)+'</div></div>';
+  }
+  var wf = inc.workflow;
+  var stepsHtml = '<div class="wf-steps">';
+  for (var s = 0; s < wf.steps.length; s++) {
+    var cls = s < wf.step ? 'done' : (s === wf.step ? 'active' : '');
+    stepsHtml += '<div class="wf-step '+cls+'"><div class="circle">'+(s<wf.step?'✓':(s+1))+'</div><div class="slbl">'+escHtml(wf.steps[s])+'</div></div>';
+    if (s < wf.steps.length-1) stepsHtml += '<div class="wf-arrow">→</div>';
+  }
+  stepsHtml += '</div>';
+  var cmHtml = '<div class="comment-list">';
+  for (var c = 0; c < inc.comments.length; c++) {
+    var cm = inc.comments[c];
+    cmHtml += '<div class="comment-item"><div class="cm">'+escHtml(cm.userName)+' ／ '+fmtDateTime(cm.ts)+'</div><div class="ct">'+escHtml(cm.text)+'</div></div>';
+  }
+  cmHtml += '</div>';
+  if (canEdit()) {
+    cmHtml += '<div style="margin-top:10px;display:flex;gap:8px"><textarea id="newComment" rows="2" style="flex:1;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;font-family:inherit" placeholder="コメントを入力..."></textarea>'
+      + '<button class="btn btn-p btn-sm" onclick="addComment('+id+')">送信</button></div>';
+  }
+  var attHtml = '<div class="attach-list">';
+  var atts = inc.attachments || [];
+  for (var a = 0; a < atts.length; a++) {
+    var att = atts[a];
+    var isImg = ['jpg','jpeg','png','gif','webp'].indexOf(att.type) >= 0;
+    attHtml += '<div class="attach-item" onclick="viewAttach('+id+','+a+')">'+(isImg?'🖼':'📄')+' '+escHtml(att.name)+'</div>';
+  }
+  if (!atts.length) attHtml += '<span style="color:var(--mt);font-size:12px">添付ファイルなし</span>';
+  attHtml += '</div>';
+  var body = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    + '<div><small style="color:var(--mt)">インシデントNo</small><div><b>'+escHtml(inc.no)+'</b></div></div>'
+    + '<div><small style="color:var(--mt)">発生日時</small><div>'+escHtml(inc.date)+' '+escHtml(inc.time||'')+'</div></div>'
+    + '<div><small style="color:var(--mt)">種別</small><div><span class="tag type-'+inc.type+'">'+escHtml(TYPES[inc.type])+'</span></div></div>'
+    + '<div><small style="color:var(--mt)">重要度レベル</small><div><span class="tag '+inc.level+'">'+escHtml(LEVELS[inc.level])+'</span></div></div>'
+    + '<div><small style="color:var(--mt)">ステータス</small><div><span class="tag st-'+inc.status+'">'+escHtml(STATUSES[inc.status])+'</span></div></div>'
+    + '<div><small style="color:var(--mt)">発生部署</small><div>'+escHtml(inc.dept)+'</div></div>'
+    + '<div><small style="color:var(--mt)">発生場所</small><div>'+escHtml(inc.location)+'</div></div>'
+    + '<div><small style="color:var(--mt)">報告者</small><div>'+escHtml(inc.reporterName)+'</div></div>'
+    + '</div>'
+    + (inc.patientId||inc.patientName?'<hr class="divider"><b>患者情報</b><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px"><div><small style="color:var(--mt)">患者ID</small><div>'+escHtml(inc.patientId||'—')+'</div></div><div><small style="color:var(--mt)">患者氏名</small><div>'+escHtml(inc.patientName||'—')+'</div></div><div><small style="color:var(--mt)">年齢/性別</small><div>'+(inc.patientAge||'—')+'歳 '+escHtml(inc.patientGender||'')+'</div></div></div>':'')
+    + '<hr class="divider"><b>発生状況</b><div style="margin-top:8px;white-space:pre-wrap;font-size:13px;line-height:1.6">'+escHtml(inc.desc)+'</div>'
+    + (tfields.length?'<hr class="divider"><b>種別詳細</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+tfHtml+'</div>':'')
+    + (inc.initialAction?'<hr class="divider"><b>初期対応</b><div style="margin-top:8px;white-space:pre-wrap;font-size:13px">'+escHtml(inc.initialAction)+'</div>':'')
+    + '<hr class="divider"><b>承認ワークフロー</b>'+stepsHtml
+    + (inc.measures?'<hr class="divider"><b>対策内容</b><div style="margin-top:8px;font-size:13px;white-space:pre-wrap">'+escHtml(inc.measures)+'</div>':'')
+    + '<hr class="divider"><b>📎 添付ファイル</b>'+attHtml
+    + '<hr class="divider"><b>💬 コメント・フィードバック</b>'+cmHtml;
+  var foot = canEdit()
+    ? '<button class="btn btn-p btn-sm" onclick="editStatus('+id+')">状態変更</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="editMeasures('+id+')">対策入力</button>'
+      + '<button class="btn btn-gray btn-sm" onclick="closeModal()">閉じる</button>'
+    : '<button class="btn btn-gray btn-sm" onclick="closeModal()">閉じる</button>';
+  openModal('インシデント詳細: '+inc.no, body, foot, 'lg');
+}
+
+function addComment(id) {
+  var txt = document.getElementById('newComment').value.trim();
+  if (!txt) return;
+  var incs = DB.get('incidents') || [];
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].id === id) {
+      if (!incs[i].comments) incs[i].comments = [];
+      incs[i].comments.push({id:uid(), userId:CU.id, userName:CU.name, ts:Date.now(), text:txt});
+      break;
+    }
+  }
+  DB.set('incidents', incs);
+  addLog('コメント追加', 'ID:'+id);
+  toast('コメントを追加しました','s');
+  viewIncident(id);
+}
+
+function editStatus(id) {
+  var incs = DB.get('incidents') || [];
+  var inc = null;
+  for (var i = 0; i < incs.length; i++) { if (incs[i].id === id) { inc = incs[i]; break; } }
+  if (!inc) return;
+  var opts = Object.keys(STATUSES).map(function(k) {
+    return '<option value="'+k+'"'+(inc.status===k?' selected':'')+'>'+STATUSES[k]+'</option>';
+  }).join('');
+  var lvOpts = Object.keys(LEVELS).map(function(k) {
+    return '<option value="'+k+'"'+(inc.level===k?' selected':'')+'>'+LEVELS[k]+'</option>';
+  }).join('');
+  var body = '<div class="form-group"><label>ステータス</label><select id="es_status">'+opts+'</select></div>'
+    + '<div class="form-group mt8"><label>重要度レベル変更</label><select id="es_level">'+lvOpts+'</select></div>'
+    + '<div class="form-group mt8"><label>コメント（任意）</label><textarea id="es_comment" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px"></textarea></div>';
+  openModal('ステータス変更: '+inc.no, body,
+    '<button class="btn btn-p" onclick="saveStatus('+id+')">保存</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>', 'sm');
+}
+
+function saveStatus(id) {
+  var st = document.getElementById('es_status').value;
+  var lv = document.getElementById('es_level').value;
+  var cm = document.getElementById('es_comment').value.trim();
+  var incs = DB.get('incidents') || [];
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].id === id) {
+      incs[i].status = st; incs[i].level = lv;
+      if (cm) {
+        if (!incs[i].comments) incs[i].comments = [];
+        incs[i].comments.push({id:uid(), userId:CU.id, userName:CU.name, ts:Date.now(), text:'[状態変更: '+STATUSES[st]+'] '+cm});
+      }
+      break;
+    }
+  }
+  DB.set('incidents', incs);
+  addLog('ステータス変更', 'ID:'+id+' → '+STATUSES[st]);
+  toast('ステータスを更新しました','s');
+  updateBadges();
+  closeModal();
+  filterIncs();
+}
+
+function editMeasures(id) {
+  var incs = DB.get('incidents') || [];
+  var inc = null;
+  for (var i = 0; i < incs.length; i++) { if (incs[i].id === id) { inc = incs[i]; break; } }
+  if (!inc) return;
+  var body = '<div class="form-group"><label>根本原因</label><input type="text" id="em_root" value="'+escHtml(inc.rootCause||'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group mt8"><label>対策内容</label><textarea id="em_measures" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px">'+escHtml(inc.measures||'')+'</textarea></div>';
+  openModal('対策入力: '+inc.no, body,
+    '<button class="btn btn-p" onclick="saveMeasures('+id+')">保存</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>');
+}
+
+function saveMeasures(id) {
+  var root = document.getElementById('em_root').value;
+  var meas = document.getElementById('em_measures').value;
+  var incs = DB.get('incidents') || [];
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].id === id) { incs[i].rootCause = root; incs[i].measures = meas; break; }
+  }
+  DB.set('incidents', incs);
+  addLog('対策入力', 'ID:'+id);
+  toast('対策を保存しました','s');
+  closeModal();
+}
+
+function viewAttach(incId, idx) {
+  var incs = DB.get('incidents') || [];
+  var inc = null;
+  for (var i = 0; i < incs.length; i++) { if (incs[i].id === incId) { inc = incs[i]; break; } }
+  if (!inc || !inc.attachments || !inc.attachments[idx]) return;
+  var att = inc.attachments[idx];
+  var isImg = ['jpg','jpeg','png','gif','webp'].indexOf(att.type) >= 0;
+  if (isImg && att.dataUrl) {
+    openModal(att.name, '<img src="'+att.dataUrl+'" style="max-width:100%;border-radius:8px">', '<button class="btn btn-gray" onclick="closeModal()">閉じる</button>');
+  } else if (att.dataUrl) {
+    var a = document.createElement('a');
+    a.href = att.dataUrl; a.download = att.name; a.click();
+  }
+}
+
+// ===== WORKFLOW =====
+function renderWorkflow(el) {
+  var incs = DB.get('incidents') || [];
+  var pending = incs.filter(function(inc) { return inc.status !== 'done' && inc.status !== 'reject'; });
+  var rows = '';
+  for (var i = 0; i < pending.length; i++) {
+    var inc = pending[i];
+    var wf = inc.workflow;
+    var progress = Math.round((wf.step / wf.steps.length) * 100);
+    var stepsHtml = '<div class="wf-steps" style="margin:0">';
+    for (var s = 0; s < wf.steps.length; s++) {
+      var cls = s < wf.step ? 'done' : (s === wf.step ? 'active' : '');
+      stepsHtml += '<div class="wf-step '+cls+'" style="min-width:60px"><div class="circle" style="width:24px;height:24px;font-size:11px">'+(s<wf.step?'✓':(s+1))+'</div><div class="slbl">'+escHtml(wf.steps[s])+'</div></div>';
+      if (s < wf.steps.length-1) stepsHtml += '<div class="wf-arrow" style="font-size:14px;margin-top:-12px">→</div>';
+    }
+    stepsHtml += '</div>';
+    rows += '<tr>'
+      + '<td><b style="color:var(--p);cursor:pointer" onclick="viewIncident('+inc.id+')">'+escHtml(inc.no)+'</b></td>'
+      + '<td>'+escHtml(inc.title)+'</td>'
+      + '<td><span class="tag type-'+inc.type+'">'+escHtml(TYPES[inc.type])+'</span></td>'
+      + '<td><span class="tag '+inc.level+'">'+escHtml(LEVELS[inc.level])+'</span></td>'
+      + '<td>'+stepsHtml+'<div class="progress-bar" style="margin-top:4px"><div class="fill" style="width:'+progress+'%"></div></div></td>'
+      + '<td><span class="tag st-'+inc.status+'">'+escHtml(STATUSES[inc.status])+'</span></td>'
+      + '<td>'
+      + (canEdit()?'<button class="btn btn-p btn-sm" onclick="approveStep('+inc.id+')">承認</button> ':'')
+      + (canEdit()?'<button class="btn btn-r btn-sm" onclick="rejectInc('+inc.id+')">棄却</button>':'')
+      + '</td></tr>';
+  }
+  el.innerHTML = '<div class="page-head"><h2>✅ 承認ワークフロー</h2></div>'
+    + '<div class="card" style="padding:0"><div class="tbl-wrap">'
+    + (rows ? '<table><thead><tr><th>No</th><th>タイトル</th><th>種別</th><th>レベル</th><th>ステップ</th><th>状況</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      : '<div class="empty">対応中のインシデントはありません</div>')
+    + '</div></div>';
+}
+
+function approveStep(id) {
+  var incs = DB.get('incidents') || [];
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].id === id) {
+      var wf = incs[i].workflow;
+      wf.approvals.push({step:wf.step, userId:CU.id, userName:CU.name, ts:Date.now()});
+      wf.step++;
+      if (wf.step >= wf.steps.length) {
+        incs[i].status = 'done';
+      } else {
+        var stMap = [null,'review','plan','impl'];
+        incs[i].status = stMap[wf.step] || incs[i].status;
+      }
+      break;
+    }
+  }
+  DB.set('incidents', incs);
+  addLog('承認', 'ID:'+id);
+  toast('承認しました','s');
+  updateBadges();
+  renderWorkflow(document.getElementById('content'));
+}
+
+function rejectInc(id) {
+  if (!confirm('このインシデント報告を棄却しますか？')) return;
+  var incs = DB.get('incidents') || [];
+  for (var i = 0; i < incs.length; i++) {
+    if (incs[i].id === id) { incs[i].status = 'reject'; break; }
+  }
+  DB.set('incidents', incs);
+  addLog('棄却', 'ID:'+id);
+  toast('棄却しました');
+  updateBadges();
+  renderWorkflow(document.getElementById('content'));
+}
+
+// ===== ANALYSIS =====
+function renderAnalysis(el) {
+  var incs = DB.get('incidents') || [];
+  el.innerHTML = '<div class="page-head"><h2>📊 統計・分析</h2>'
+    + '<button class="btn btn-p btn-sm" onclick="exportExcel()">📥 Excel出力</button></div>'
+    + '<div class="chart-grid">'
+    + '<div class="chart-box"><h4>月別発生件数</h4><canvas id="c_month" height="180"></canvas></div>'
+    + '<div class="chart-box"><h4>種別分布</h4><canvas id="c_type" height="180"></canvas></div>'
+    + '<div class="chart-box"><h4>レベル別分布</h4><canvas id="c_level" height="180"></canvas></div>'
+    + '<div class="chart-box"><h4>時間帯別発生</h4><canvas id="c_time" height="180"></canvas></div>'
+    + '</div>'
+    + '<div class="chart-grid">'
+    + '<div class="chart-box"><h4>部署別件数</h4><canvas id="c_dept" height="200"></canvas></div>'
+    + '<div class="chart-box"><h4>ステータス分布</h4><canvas id="c_status" height="200"></canvas></div>'
+    + '</div>';
+  setTimeout(function() { drawCharts(incs); }, 50);
+}
+
+function drawBar(canvasId, labels, data, colors) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.offsetWidth || 300;
+  var H = parseInt(canvas.getAttribute('height')) || 180;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+  var max = Math.max.apply(null, data.concat([1]));
+  var padL = 36, padR = 10, padT = 16, padB = 44;
+  var bw = Math.floor((W - padL - padR) / labels.length) - 4;
+  for (var i = 0; i < labels.length; i++) {
+    var x = padL + i * ((W - padL - padR) / labels.length) + 2;
+    var barH = Math.round((data[i] / max) * (H - padT - padB));
+    var y = H - padB - barH;
+    ctx.fillStyle = colors ? colors[i % colors.length] : '#1e6fb5';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, bw, barH, 4) : ctx.rect(x, y, bw, barH);
+    ctx.fill();
+    ctx.fillStyle = '#1a2a3a';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(data[i], x + bw/2, y - 3);
+    ctx.fillStyle = '#5a7080';
+    ctx.font = '10px sans-serif';
+    var lbl = labels[i];
+    if (lbl.length > 4) lbl = lbl.slice(0,4);
+    ctx.fillText(lbl, x + bw/2, H - padB + 14);
+  }
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H-padB); ctx.lineTo(W-padR, H-padB); ctx.stroke();
+}
+
+function drawPie(canvasId, labels, data, colors) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.offsetWidth || 300;
+  var H = parseInt(canvas.getAttribute('height')) || 180;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+  var total = data.reduce(function(a,b){return a+b;}, 0);
+  if (total === 0) { ctx.fillStyle='#ccc'; ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('データなし',W/2,H/2); return; }
+  var cx = W * 0.38, cy = H/2, r = Math.min(cx, cy) - 10;
+  var startAngle = -Math.PI/2;
+  for (var i = 0; i < data.length; i++) {
+    var slice = (data[i] / total) * 2 * Math.PI;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    startAngle += slice;
+  }
+  var legendX = W * 0.78, legendY = 16;
+  ctx.font = '11px sans-serif';
+  for (var j = 0; j < labels.length; j++) {
+    ctx.fillStyle = colors[j % colors.length];
+    ctx.fillRect(legendX - 32, legendY + j*17, 12, 12);
+    ctx.fillStyle = '#1a2a3a';
+    ctx.textAlign = 'left';
+    var lbl = labels[j].length > 6 ? labels[j].slice(0,6)+'…' : labels[j];
+    ctx.fillText(lbl+' ('+data[j]+')', legendX - 16, legendY + j*17 + 10);
+  }
+}
+
+function drawCharts(incs) {
+  var COLORS = ['#1e6fb5','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0891b2','#65a30d'];
+  // Monthly
+  var monthMap = {};
+  var now = new Date();
+  for (var m = 5; m >= 0; m--) {
+    var d = new Date(now.getFullYear(), now.getMonth()-m, 1);
+    var key = d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0');
+    monthMap[key] = 0;
+  }
+  incs.forEach(function(inc) { var k = inc.date.slice(0,7).replace('-','/'); if (monthMap.hasOwnProperty(k)) monthMap[k]++; });
+  drawBar('c_month', Object.keys(monthMap).map(function(k){return k.slice(5)+'月';}), Object.values(monthMap), COLORS);
+  // Type
+  var typeMap = {};
+  Object.keys(TYPES).forEach(function(k){typeMap[k]=0;});
+  incs.forEach(function(inc){if(typeMap.hasOwnProperty(inc.type)) typeMap[inc.type]++;});
+  var tkeys = Object.keys(typeMap).filter(function(k){return typeMap[k]>0;});
+  drawPie('c_type', tkeys.map(function(k){return TYPES[k];}), tkeys.map(function(k){return typeMap[k];}), COLORS);
+  // Level
+  var lvMap = {};
+  Object.keys(LEVELS).forEach(function(k){lvMap[k]=0;});
+  incs.forEach(function(inc){if(lvMap.hasOwnProperty(inc.level)) lvMap[inc.level]++;});
+  var lvkeys = Object.keys(lvMap).filter(function(k){return lvMap[k]>0;});
+  drawBar('c_level', lvkeys.map(function(k){return k.replace('lv','Lv');}), lvkeys.map(function(k){return lvMap[k];}), ['#059669','#1e6fb5','#d97706','#f97316','#ef4444','#b91c1c','#7f1d1d','#450a0a']);
+  // Time
+  var timeSlots = ['0-3時','3-6時','6-9時','9-12時','12-15時','15-18時','18-21時','21-24時'];
+  var timeCounts = [0,0,0,0,0,0,0,0];
+  incs.forEach(function(inc) {
+    if (inc.time) { var h = parseInt(inc.time.split(':')[0]); timeCounts[Math.floor(h/3)]++; }
+  });
+  drawBar('c_time', timeSlots, timeCounts, COLORS);
+  // Dept
+  var deptMap = {};
+  incs.forEach(function(inc){ deptMap[inc.dept] = (deptMap[inc.dept]||0)+1; });
+  var dkeys = Object.keys(deptMap).sort(function(a,b){return deptMap[b]-deptMap[a];}).slice(0,8);
+  drawBar('c_dept', dkeys, dkeys.map(function(k){return deptMap[k];}), COLORS);
+  // Status
+  var stMap = {};
+  Object.keys(STATUSES).forEach(function(k){stMap[k]=0;});
+  incs.forEach(function(inc){if(stMap.hasOwnProperty(inc.status)) stMap[inc.status]++;});
+  var stkeys = Object.keys(stMap).filter(function(k){return stMap[k]>0;});
+  drawPie('c_status', stkeys.map(function(k){return STATUSES[k];}), stkeys.map(function(k){return stMap[k];}), COLORS);
+}
+
+// ===== RCA =====
+function renderRCA(el) {
+  var rcaList = DB.get('rca_list') || [];
+  var incs = DB.get('incidents') || [];
+  var rows = '';
+  for (var i = 0; i < rcaList.length; i++) {
+    var r = rcaList[i];
+    var inc = null;
+    for (var j = 0; j < incs.length; j++) { if (incs[j].id === r.incidentId) { inc = incs[j]; break; } }
+    rows += '<tr><td>'+escHtml(r.date)+'</td><td>'+(inc?'<b>'+escHtml(inc.no)+'</b> '+escHtml(inc.title):'—')+'</td>'
+      + '<td>'+escHtml(r.analyst)+'</td>'
+      + '<td><button class="btn btn-p btn-sm" onclick="viewRCA('+r.id+')">参照</button> '
+      + (canEdit()?'<button class="btn btn-r btn-sm" onclick="deleteRCA('+r.id+')">削除</button>':'')
+      + '</td></tr>';
+  }
+  // Incident selector for new RCA
+  var incOpts = '<option value="">インシデントを選択</option>';
+  for (var k = 0; k < incs.length; k++) {
+    incOpts += '<option value="'+incs[k].id+'">'+escHtml(incs[k].no)+' '+escHtml(incs[k].title)+'</option>';
+  }
+  el.innerHTML = '<div class="page-head"><h2>🔍 RCA・根本原因分析</h2>'
+    + (canEdit()?'<button class="btn btn-p" onclick="showNewRCA()">＋ 新規RCA作成</button>':'')
+    + '</div>'
+    + '<div class="card"><h3>RCA一覧</h3>'
+    + (rows ? '<div class="tbl-wrap"><table><thead><tr><th>日付</th><th>対象インシデント</th><th>分析担当</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      : '<div class="empty">RCA記録がありません</div>')
+    + '</div>';
+}
+
+function showNewRCA() {
+  var incs = DB.get('incidents') || [];
+  var incOpts = '<option value="">選択</option>';
+  for (var k = 0; k < incs.length; k++) {
+    incOpts += '<option value="'+incs[k].id+'">'+escHtml(incs[k].no)+' '+escHtml(incs[k].title)+'</option>';
+  }
+  var body = '<div class="form-group"><label>対象インシデント</label><select id="rca_inc">'+incOpts+'</select></div>'
+    + '<div class="form-group mt8"><label>分析担当者</label><input type="text" id="rca_analyst" value="'+escHtml(CU.name)+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group mt8"><label>事象（何が起きたか）</label><textarea id="rca_event" rows="2" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px"></textarea></div>'
+    + '<hr class="divider"><b>なぜなぜ分析（5Whys）</b>'
+    + '<div class="rca-why mt8">'
+    + [1,2,3,4,5].map(function(n){ return '<div class="rca-why-row"><div class="num">'+n+'</div><input type="text" id="rca_why'+n+'" placeholder="なぜ'+n+'：" style="flex:1;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px"></div>'; }).join('')
+    + '</div>'
+    + '<hr class="divider"><b>根本原因（特定）</b>'
+    + '<div class="form-group mt8"><textarea id="rca_root" rows="2" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px" placeholder="特定した根本原因"></textarea></div>'
+    + '<hr class="divider"><b>フィッシュボーン（要因分類）</b>'
+    + '<div class="form-row col2 mt8">'
+    + ['人（Man）','機械・設備（Machine）','方法・手順（Method）','材料・情報（Material）','環境（Environment）','管理・体制（Management）'].map(function(cat,idx){
+        return '<div class="form-group"><label>'+cat+'</label><textarea id="rca_fb'+idx+'" rows="2" style="width:100%;padding:6px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px" placeholder="要因を入力"></textarea></div>';
+      }).join('')
+    + '</div>'
+    + '<div class="form-group mt8"><label>対策案</label><textarea id="rca_meas" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px" placeholder="具体的な再発防止策"></textarea></div>';
+  openModal('新規RCA作成', body,
+    '<button class="btn btn-p" onclick="saveRCA()">保存</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>', 'lg');
+}
+
+function saveRCA() {
+  var rcaList = DB.get('rca_list') || [];
+  var fbCats = ['人（Man）','機械・設備（Machine）','方法・手順（Method）','材料・情報（Material）','環境（Environment）','管理・体制（Management）'];
+  var fb = {};
+  for (var i = 0; i < 6; i++) { var el = document.getElementById('rca_fb'+i); fb[fbCats[i]] = el ? el.value : ''; }
+  var whys = [];
+  for (var w = 1; w <= 5; w++) { var wel = document.getElementById('rca_why'+w); if (wel && wel.value.trim()) whys.push(wel.value.trim()); }
+  var newRca = {
+    id: uid(), date: today(),
+    incidentId: parseInt(document.getElementById('rca_inc').value) || null,
+    analyst: document.getElementById('rca_analyst').value,
+    event: document.getElementById('rca_event').value,
+    whys: whys, rootCause: document.getElementById('rca_root').value,
+    fishbone: fb, measures: document.getElementById('rca_meas').value,
+    createdBy: CU.name, createdAt: Date.now()
+  };
+  rcaList.unshift(newRca);
+  DB.set('rca_list', rcaList);
+  addLog('RCA作成', '対象InID:'+newRca.incidentId);
+  toast('RCAを保存しました','s');
+  closeModal();
+  renderRCA(document.getElementById('content'));
+}
+
+function viewRCA(id) {
+  var rcaList = DB.get('rca_list') || [];
+  var r = null;
+  for (var i = 0; i < rcaList.length; i++) { if (rcaList[i].id === id) { r = rcaList[i]; break; } }
+  if (!r) return;
+  var whysHtml = '<div class="rca-why">';
+  for (var w = 0; w < r.whys.length; w++) {
+    whysHtml += '<div class="rca-why-row"><div class="num">'+(w+1)+'</div><div style="flex:1;padding:8px;background:#f8fafc;border-radius:6px;font-size:13px">'+escHtml(r.whys[w])+'</div></div>';
+  }
+  whysHtml += '</div>';
+  var fbHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">';
+  Object.keys(r.fishbone||{}).forEach(function(cat) {
+    if (r.fishbone[cat]) fbHtml += '<div style="background:#f0f4fa;border-radius:6px;padding:8px"><b style="font-size:12px">'+escHtml(cat)+'</b><div style="font-size:12px;margin-top:4px;white-space:pre-wrap">'+escHtml(r.fishbone[cat])+'</div></div>';
+  });
+  fbHtml += '</div>';
+  var body = '<p><small style="color:var(--mt)">日付: '+escHtml(r.date)+' ／ 担当: '+escHtml(r.analyst)+'</small></p>'
+    + '<hr class="divider"><b>事象</b><div style="margin-top:6px;font-size:13px">'+escHtml(r.event||'—')+'</div>'
+    + '<hr class="divider"><b>なぜなぜ分析</b>'+whysHtml
+    + '<hr class="divider"><b>根本原因</b><div style="margin-top:6px;font-size:13px;padding:10px;background:#fff3cd;border-radius:6px">'+escHtml(r.rootCause||'—')+'</div>'
+    + '<hr class="divider"><b>フィッシュボーン</b>'+fbHtml
+    + '<hr class="divider"><b>対策案</b><div style="margin-top:6px;font-size:13px;white-space:pre-wrap">'+escHtml(r.measures||'—')+'</div>';
+  openModal('RCA参照', body, '<button class="btn btn-gray" onclick="closeModal()">閉じる</button>', 'lg');
+}
+
+function deleteRCA(id) {
+  if (!confirm('このRCAを削除しますか？')) return;
+  var rcaList = DB.get('rca_list') || [];
+  rcaList = rcaList.filter(function(r){ return r.id !== id; });
+  DB.set('rca_list', rcaList);
+  toast('削除しました');
+  renderRCA(document.getElementById('content'));
+}
+
+// ===== BOARD =====
+function renderBoard(el) {
+  var posts = DB.get('board_posts') || [];
+  var postsHtml = '';
+  for (var i = 0; i < posts.length; i++) {
+    var p = posts[i];
+    postsHtml += '<div class="post-card'+(p.urgent?' urgent':'')+'"><div class="ph">'
+      + '<span class="pt">'+(p.urgent?'🚨 ':'')+escHtml(p.title)+'</span>'
+      + (p.urgent?'<span class="tag urgent">緊急</span>':'')
+      + '</div><div class="pm">'+escHtml(p.author)+' ／ '+fmtDate(p.date)+'  👁 '+p.reads+'閲覧</div>'
+      + '<div class="pc">'+escHtml(p.content)+'</div>'
+      + (canEdit()?'<div class="mt8"><button class="btn btn-r btn-sm" onclick="deletePost('+p.id+')">削除</button></div>':'')
+      + '</div>';
+  }
+  el.innerHTML = '<div class="page-head"><h2>📢 安全情報掲示板</h2>'
+    + (canEdit()?'<button class="btn btn-p" onclick="showNewPost()">＋ 新規投稿</button>':'')
+    + '</div>'
+    + (postsHtml || '<div class="card"><div class="empty">投稿がありません</div></div>');
+}
+
+function showNewPost() {
+  var body = '<div class="form-group"><label class="required">タイトル</label><input type="text" id="bp_title" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group mt8"><label class="required">内容</label><textarea id="bp_content" rows="6" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px"></textarea></div>'
+    + '<div class="form-group mt8" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="bp_urgent"><label for="bp_urgent" style="cursor:pointer">🚨 緊急案件としてマーク</label></div>';
+  openModal('新規投稿', body,
+    '<button class="btn btn-p" onclick="savePost()">投稿</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>');
+}
+
+function savePost() {
+  var title = document.getElementById('bp_title').value.trim();
+  var content = document.getElementById('bp_content').value.trim();
+  if (!title || !content) { toast('タイトルと内容を入力してください','e'); return; }
+  var posts = DB.get('board_posts') || [];
+  posts.unshift({id:uid(), date:Date.now(), title:title, content:content,
+    urgent:document.getElementById('bp_urgent').checked, author:CU.name, reads:0});
+  DB.set('board_posts', posts);
+  addLog('掲示板投稿', title);
+  toast('投稿しました','s');
+  closeModal();
+  renderBoard(document.getElementById('content'));
+}
+
+function deletePost(id) {
+  if (!confirm('この投稿を削除しますか？')) return;
+  var posts = DB.get('board_posts') || [];
+  posts = posts.filter(function(p){return p.id !== id;});
+  DB.set('board_posts', posts);
+  toast('削除しました');
+  renderBoard(document.getElementById('content'));
+}
+
+// ===== NEWS =====
+function renderNews(el) {
+  var news = DB.get('news') || [];
+  var incs = DB.get('incidents') || [];
+  var html = '<div class="page-head"><h2>📰 医療安全ニュース</h2>'
+    + (canEdit()?'<button class="btn btn-p" onclick="showAutoNews()">✨ 自動生成</button> <button class="btn btn-outline" onclick="showNewNews()">＋ 手動作成</button>':'')
+    + '</div>';
+  for (var i = 0; i < news.length; i++) {
+    var n = news[i];
+    html += '<div class="card"><div class="flex-row"><h3 style="margin-bottom:0">'+escHtml(n.title)+'</h3><span class="ml-auto" style="font-size:12px;color:var(--mt)">'+fmtDate(n.date)+' 執筆: '+escHtml(n.author)+'</span></div>'
+      + '<hr class="divider"><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">'+escHtml(n.content)+'</div>'
+      + '<div class="mt8 flex-row">'
+      + '<button class="btn btn-p btn-sm" onclick="printNews('+n.id+')">🖨 印刷</button>'
+      + (canEdit()?'<button class="btn btn-r btn-sm" onclick="deleteNews('+n.id+')">削除</button>':'')
+      + '</div></div>';
+  }
+  if (!news.length) html += '<div class="card"><div class="empty">ニュースがありません</div></div>';
+  el.innerHTML = html;
+}
+
+function showAutoNews() {
+  var incs = DB.get('incidents') || [];
+  var d = new Date();
+  var prevM = d.getMonth() === 0 ? 12 : d.getMonth();
+  var prevY = d.getMonth() === 0 ? d.getFullYear()-1 : d.getFullYear();
+  var monthIncs = incs.filter(function(inc) {
+    var dt = new Date(inc.occDate||inc.reportDate);
+    return dt.getFullYear() === prevY && (dt.getMonth()+1) === prevM;
+  });
+  var typeCount = {};
+  monthIncs.forEach(function(inc){ typeCount[TYPES[inc.type]] = (typeCount[TYPES[inc.type]]||0)+1; });
+  var typeLines = Object.keys(typeCount).map(function(k){ return '・'+k+': '+typeCount[k]+'件'; }).join('\n');
+  var highIncs = monthIncs.filter(function(inc){ return inc.level==='lv3a'||inc.level==='lv3b'||inc.level==='lv4a'||inc.level==='lv4b'||inc.level==='lv5'; });
+  var content = '【'+prevM+'月のインシデント概要】\n'
+    + '報告件数：'+monthIncs.length+'件\n'
+    + (typeLines || '・報告なし')+'\n\n'
+    + '【重大インシデント（レベル3以上）】\n'
+    + (highIncs.length > 0 ? highIncs.map(function(inc){ return '・'+inc.no+' '+inc.title+'（'+LEVELS[inc.level]+'）'; }).join('\n') : '・該当なし')
+    + '\n\n【今月の重点対策】\n'
+    + (typeCount['薬剤'] ? '・薬剤エラー防止：5R（正しい患者・薬・用量・時間・方法）の徹底\n' : '')
+    + (typeCount['転倒・転落'] ? '・転倒予防：アセスメントスコア定期見直し、センサーマット活用\n' : '')
+    + '・インシデント発生時は速やかに報告してください\n\n'
+    + '【お知らせ】\n安全管理室では毎月RCA分析を実施しています。重大事例については部署へのフィードバックを行います。\n\n'
+    + '医療安全管理室';
+  var body = '<div class="form-group"><label>タイトル</label><input type="text" id="ns_title" value="'+prevY+'年'+prevM+'月 医療安全ニュース Vol.'+(DB.get('news')||[]).length+1+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group mt8"><label>内容（編集可能）</label><textarea id="ns_content" rows="14" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px">'+escHtml(content)+'</textarea></div>';
+  openModal('医療安全ニュース 自動生成', body,
+    '<button class="btn btn-p" onclick="saveNews()">保存</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>', 'lg');
+}
+
+function showNewNews() {
+  var body = '<div class="form-group"><label class="required">タイトル</label><input type="text" id="ns_title" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group mt8"><label class="required">内容</label><textarea id="ns_content" rows="12" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px"></textarea></div>';
+  openModal('ニュース手動作成', body,
+    '<button class="btn btn-p" onclick="saveNews()">保存</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>', 'lg');
+}
+
+function saveNews() {
+  var title = document.getElementById('ns_title').value.trim();
+  var content = document.getElementById('ns_content').value.trim();
+  if (!title || !content) { toast('タイトルと内容を入力してください','e'); return; }
+  var news = DB.get('news') || [];
+  news.unshift({id:uid(), date:Date.now(), title:title, content:content, author:CU.name, incidentIds:[]});
+  DB.set('news', news);
+  addLog('ニュース作成', title);
+  toast('ニュースを保存しました','s');
+  closeModal();
+  renderNews(document.getElementById('content'));
+}
+
+function deleteNews(id) {
+  if (!confirm('このニュースを削除しますか？')) return;
+  var news = DB.get('news') || [];
+  news = news.filter(function(n){return n.id!==id;});
+  DB.set('news', news);
+  toast('削除しました');
+  renderNews(document.getElementById('content'));
+}
+
+function printNews(id) {
+  var news = DB.get('news') || [];
+  var n = null;
+  for (var i = 0; i < news.length; i++) { if (news[i].id === id) { n = news[i]; break; } }
+  if (!n) return;
+  var win = window.open('','_blank','width=800,height=600');
+  var settings = DB.get('settings') || {};
+  win.document.write('<html><head><title>'+n.title+'</title><style>body{font-family:Meiryo,sans-serif;padding:32px;max-width:700px;margin:0 auto}h1{font-size:18px;border-bottom:2px solid #1e6fb5;padding-bottom:8px}pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.8}footer{margin-top:40px;font-size:12px;color:#888;border-top:1px solid #ccc;padding-top:8px}</style></head><body>');
+  win.document.write('<h1>'+n.title+'</h1><p style="font-size:12px;color:#666">発行日: '+fmtDate(n.date)+' ／ 発行: '+(settings.hospitalName||'')+'  '+escHtml(n.author)+'</p><pre>'+escHtml(n.content)+'</pre><footer>'+escHtml(settings.hospitalName||'')+'  '+escHtml(settings.dept||'')+'</footer></body></html>');
+  win.document.close();
+  win.print();
+}
+
+// ===== EXPORT =====
+function renderExport(el) {
+  el.innerHTML = '<div class="page-head"><h2>📤 外部連携・データ出力</h2></div>'
+    + '<div class="card"><h3>📥 Excelエクスポート（XLSX）</h3>'
+    + '<p style="color:var(--mt);font-size:13px;margin-bottom:12px">インシデント一覧をExcel形式（CSV/UTF-8 BOM付き）でエクスポートします。</p>'
+    + '<div class="flex-row" style="gap:10px;flex-wrap:wrap">'
+    + '<button class="btn btn-p" onclick="exportExcel()">📊 全件エクスポート（CSV）</button>'
+    + '<button class="btn btn-outline" onclick="exportFiltered()">🔍 現在のフィルター条件で出力</button>'
+    + '</div></div>'
+    + '<div class="card"><h3>🏥 日本医療機能評価機構 報告用出力</h3>'
+    + '<p style="color:var(--mt);font-size:13px;margin-bottom:12px">レベル3以上のインシデントを外部報告フォーマット（CSV）で出力します。</p>'
+    + '<button class="btn btn-o" onclick="exportJCQHC()">📤 JCQHC報告用CSV出力</button></div>'
+    + '<div class="card"><h3>🗂 XML形式エクスポート</h3>'
+    + '<p style="color:var(--mt);font-size:13px;margin-bottom:12px">全インシデントデータをXML形式で出力します。</p>'
+    + '<button class="btn btn-gray" onclick="exportXML()">📄 XML出力</button></div>'
+    + '<div class="card"><h3>🔄 データバックアップ・復元</h3>'
+    + '<p style="color:var(--mt);font-size:13px;margin-bottom:8px">全データをJSON形式でバックアップ/復元できます。</p>'
+    + '<div class="flex-row" style="gap:10px"><button class="btn btn-g" onclick="backupData()">💾 バックアップ</button>'
+    + '<label class="btn btn-gray" style="cursor:pointer">📂 復元 <input type="file" accept=".json" onchange="restoreData(event)" style="display:none"></label></div></div>';
+}
+
+function exportExcel() {
+  var incs = DB.get('incidents') || [];
+  var headers = ['No','発生日','発生時刻','種別','タイトル','レベル','ステータス','発生部署','発生場所','患者ID','患者氏名','年齢','性別','報告者','発生状況','根本原因','対策内容'];
+  var rows = [headers].concat(incs.map(function(inc) {
+    return [inc.no,inc.date,inc.time||'',TYPES[inc.type]||inc.type,inc.title,LEVELS[inc.level]||inc.level,
+      STATUSES[inc.status]||inc.status,inc.dept,inc.location,inc.patientId||'',inc.patientName||'',
+      inc.patientAge||'',inc.patientGender||'',inc.reporterName,inc.desc,inc.rootCause||'',inc.measures||''];
+  }));
+  var csv = '﻿' + rows.map(function(r) {
+    return r.map(function(c){ return '"'+String(c||'').replace(/"/g,'""')+'"'; }).join(',');
+  }).join('\r\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'incidents_'+today()+'.csv';
+  a.click();
+  addLog('Excelエクスポート', '全件 '+incs.length+'件');
+  toast('エクスポートしました','s');
+}
+
+function exportFiltered() {
+  toast('インシデント一覧でフィルターを設定後、こちらで出力してください');
+  exportExcel();
+}
+
+function exportJCQHC() {
+  var incs = DB.get('incidents') || [];
+  var high = incs.filter(function(inc){ return ['lv3a','lv3b','lv4a','lv4b','lv5'].indexOf(inc.level) >= 0; });
+  var headers = ['報告No','発生日','種別','インシデント概要','影響度レベル','発生部署','患者年齢','患者性別','根本原因','再発防止策'];
+  var rows = [headers].concat(high.map(function(inc){
+    return [inc.no,inc.date,TYPES[inc.type]||inc.type,inc.desc,LEVELS[inc.level]||inc.level,
+      inc.dept,inc.patientAge||'',inc.patientGender||'',inc.rootCause||'',inc.measures||''];
+  }));
+  var csv = '﻿' + rows.map(function(r){
+    return r.map(function(c){ return '"'+String(c||'').replace(/"/g,'""')+'"'; }).join(',');
+  }).join('\r\n');
+  var blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'JCQHC_report_'+today()+'.csv';
+  a.click();
+  addLog('JCQHC報告エクスポート', high.length+'件');
+  toast('JCQHC報告用CSVを出力しました（'+high.length+'件）','s');
+}
+
+function exportXML() {
+  var incs = DB.get('incidents') || [];
+  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n<incidents>\n';
+  incs.forEach(function(inc) {
+    xml += '  <incident>\n'
+      + '    <no>'+escHtml(inc.no)+'</no>\n'
+      + '    <date>'+escHtml(inc.date)+'</date>\n'
+      + '    <type>'+escHtml(TYPES[inc.type]||inc.type)+'</type>\n'
+      + '    <level>'+escHtml(LEVELS[inc.level]||inc.level)+'</level>\n'
+      + '    <status>'+escHtml(STATUSES[inc.status]||inc.status)+'</status>\n'
+      + '    <title>'+escHtml(inc.title)+'</title>\n'
+      + '    <dept>'+escHtml(inc.dept)+'</dept>\n'
+      + '    <description>'+escHtml(inc.desc)+'</description>\n'
+      + '    <measures>'+escHtml(inc.measures||'')+'</measures>\n'
+      + '  </incident>\n';
+  });
+  xml += '</incidents>';
+  var blob = new Blob([xml],{type:'application/xml;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'incidents_'+today()+'.xml';
+  a.click();
+  addLog('XMLエクスポート', incs.length+'件');
+  toast('XMLを出力しました','s');
+}
+
+function backupData() {
+  var data = {};
+  ['users','incidents','board_posts','news','rca_list','logs','settings'].forEach(function(k){ data[k]=DB.get(k); });
+  var blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'backup_'+today()+'.json';
+  a.click();
+  toast('バックアップしました','s');
+}
+
+function restoreData(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      Object.keys(data).forEach(function(k){ if(data[k]!==null) DB.set(k, data[k]); });
+      toast('復元しました。ページを再読み込みします。','s');
+      setTimeout(function(){ location.reload(); }, 1200);
+    } catch(err) { toast('ファイルの読み込みに失敗しました','e'); }
+  };
+  reader.readAsText(file);
+}
+
+// ===== LOG =====
+function renderLog(el) {
+  var logs = DB.get('logs') || [];
+  var rows = '';
+  for (var i = 0; i < Math.min(200, logs.length); i++) {
+    var l = logs[i];
+    rows += '<tr><td>'+fmtDateTime(l.ts)+'</td><td>'+escHtml(l.userName)+'</td><td>'+escHtml(l.action)+'</td><td>'+escHtml(l.detail)+'</td></tr>';
+  }
+  el.innerHTML = '<div class="page-head"><h2>🔒 操作ログ</h2>'
+    + '<button class="btn btn-gray btn-sm" onclick="exportLogCsv()">CSV出力</button></div>'
+    + '<div class="card" style="padding:0"><div class="tbl-wrap">'
+    + (rows ? '<table><thead><tr><th>日時</th><th>ユーザー</th><th>操作</th><th>詳細</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      : '<div class="empty">ログがありません</div>')
+    + '</div></div>';
+}
+
+function exportLogCsv() {
+  var logs = DB.get('logs') || [];
+  var rows = [['日時','ユーザー','操作','詳細']].concat(logs.map(function(l){
+    return [fmtDateTime(l.ts), l.userName, l.action, l.detail];
+  }));
+  var csv = '﻿'+rows.map(function(r){return r.map(function(c){return '"'+String(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\r\n');
+  var blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'operation_log_'+today()+'.csv';
+  a.click();
+}
+
+// ===== STAFF =====
+function renderStaff(el) {
+  var users = DB.get('users') || [];
+  var rows = '';
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    rows += '<tr><td>'+u.id+'</td><td><b>'+escHtml(u.name)+'</b></td><td>'+escHtml(u.loginId)+'</td>'
+      + '<td>'+escHtml(u.dept)+'</td><td>'+escHtml(u.roleName)+'</td><td>'+escHtml(u.role)+'</td>'
+      + '<td>'+(CU.role==='admin'?'<button class="btn btn-p btn-sm" onclick="editUser('+u.id+')">編集</button> <button class="btn btn-r btn-sm" onclick="deleteUser('+u.id+')">削除</button>':'—')+'</td>'
+      + '</tr>';
+  }
+  el.innerHTML = '<div class="page-head"><h2>👥 職員マスター</h2>'
+    + (CU.role==='admin'?'<button class="btn btn-p" onclick="showAddUser()">＋ 職員追加</button>':'')
+    + '</div>'
+    + '<div class="card" style="padding:0"><div class="tbl-wrap">'
+    + '<table><thead><tr><th>ID</th><th>氏名</th><th>ログインID</th><th>部署</th><th>役職名</th><th>権限</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    + '</div></div>';
+}
+
+function showAddUser() {
+  var roleOpts = [
+    {v:'admin',l:'管理者'},{v:'risk',l:'リスクマネジャー'},{v:'manager',l:'管理職'},
+    {v:'doctor',l:'医師'},{v:'staff',l:'スタッフ'}
+  ].map(function(r){return '<option value="'+r.v+'">'+r.l+'</option>';}).join('');
+  var body = buildUserForm(null, roleOpts);
+  openModal('職員追加', body,
+    '<button class="btn btn-p" onclick="saveUser(null)">追加</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>');
+}
+
+function editUser(id) {
+  var users = DB.get('users') || [];
+  var u = null;
+  for (var i = 0; i < users.length; i++) { if (users[i].id === id) { u = users[i]; break; } }
+  if (!u) return;
+  var roleOpts = [
+    {v:'admin',l:'管理者'},{v:'risk',l:'リスクマネジャー'},{v:'manager',l:'管理職'},
+    {v:'doctor',l:'医師'},{v:'staff',l:'スタッフ'}
+  ].map(function(r){return '<option value="'+r.v+'"'+(u.role===r.v?' selected':'')+'>'+r.l+'</option>';}).join('');
+  var body = buildUserForm(u, roleOpts);
+  openModal('職員編集', body,
+    '<button class="btn btn-p" onclick="saveUser('+id+')">保存</button><button class="btn btn-gray" onclick="closeModal()">キャンセル</button>');
+}
+
+function buildUserForm(u, roleOpts) {
+  var deptOpts = DEPTS.map(function(d){return '<option'+(u&&u.dept===d?' selected':'')+'>'+d+'</option>';}).join('');
+  return '<div class="form-row col2">'
+    + '<div class="form-group"><label class="required">氏名</label><input type="text" id="uf_name" value="'+escHtml(u?u.name:'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group"><label class="required">ログインID</label><input type="text" id="uf_lid" value="'+escHtml(u?u.loginId:'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '</div><div class="form-row col2">'
+    + '<div class="form-group"><label class="'+(u?'':'required')+'">パスワード'+(u?' (空欄で変更なし)':'')+'</label><input type="password" id="uf_pw" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group"><label class="required">役職名</label><input type="text" id="uf_rname" value="'+escHtml(u?u.roleName:'')+'" placeholder="例: 看護師" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '</div><div class="form-row col2">'
+    + '<div class="form-group"><label class="required">部署</label><select id="uf_dept" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px">'+deptOpts+'</select></div>'
+    + '<div class="form-group"><label class="required">システム権限</label><select id="uf_role" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px">'+roleOpts+'</select></div>'
+    + '</div>';
+}
+
+function saveUser(id) {
+  var name = document.getElementById('uf_name').value.trim();
+  var lid = document.getElementById('uf_lid').value.trim();
+  var pw = document.getElementById('uf_pw').value;
+  var roleName = document.getElementById('uf_rname').value.trim();
+  var dept = document.getElementById('uf_dept').value;
+  var role = document.getElementById('uf_role').value;
+  if (!name || !lid || !roleName) { toast('必須項目を入力してください','e'); return; }
+  var users = DB.get('users') || [];
+  if (id === null) {
+    if (!pw) { toast('新規追加時はパスワードを入力してください','e'); return; }
+    var maxId = 0;
+    users.forEach(function(u){ if(u.id>maxId) maxId=u.id; });
+    users.push({id:maxId+1, loginId:lid, password:pw, name:name, roleName:roleName, role:role, dept:dept});
+  } else {
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].id === id) {
+        users[i].name = name; users[i].loginId = lid;
+        if (pw) users[i].password = pw;
+        users[i].roleName = roleName; users[i].role = role; users[i].dept = dept;
+        break;
+      }
+    }
+  }
+  DB.set('users', users);
+  addLog(id===null?'職員追加':'職員編集', name);
+  toast('保存しました','s');
+  closeModal();
+  renderStaff(document.getElementById('content'));
+}
+
+function deleteUser(id) {
+  if (id === CU.id) { toast('自分自身は削除できません','e'); return; }
+  if (!confirm('この職員を削除しますか？')) return;
+  var users = DB.get('users') || [];
+  users = users.filter(function(u){return u.id !== id;});
+  DB.set('users', users);
+  toast('削除しました');
+  renderStaff(document.getElementById('content'));
+}
+
+// ===== SETTINGS =====
+function renderSettings(el) {
+  var s = DB.get('settings') || {};
+  el.innerHTML = '<div class="page-head"><h2>⚙️ システム設定</h2></div>'
+    + '<div class="card"><h3>🏥 病院・システム情報</h3>'
+    + '<div class="form-row col2">'
+    + '<div class="form-group"><label>病院名</label><input type="text" id="st_hname" value="'+escHtml(s.hospitalName||'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group"><label>医療安全管理部門名</label><input type="text" id="st_dept" value="'+escHtml(s.dept||'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '</div><div class="form-row col2">'
+    + '<div class="form-group"><label>医療安全管理者</label><input type="text" id="st_dir" value="'+escHtml(s.director||'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '<div class="form-group"><label>外部報告先URL</label><input type="text" id="st_url" value="'+escHtml(s.reportingUrl||'')+'" style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:6px"></div>'
+    + '</div>'
+    + '<button class="btn btn-p mt8" onclick="saveSettings()">設定を保存</button>'
+    + '</div>'
+    + '<div class="card"><h3>🔐 権限マトリクス</h3>'
+    + '<div class="tbl-wrap"><table><thead><tr><th>権限</th><th>インシデント報告</th><th>ステータス変更</th><th>承認</th><th>ニュース作成</th><th>職員管理</th><th>設定変更</th></tr></thead><tbody>'
+    + '<tr><td><b>管理者</b></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>'
+    + '<tr><td><b>リスクマネジャー</b></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>'
+    + '<tr><td><b>管理職</b></td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>'
+    + '<tr><td><b>医師</b></td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>'
+    + '<tr><td><b>スタッフ</b></td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>'
+    + '</tbody></table></div></div>'
+    + (CU.role==='admin'?'<div class="card"><h3 style="color:var(--dg)">⚠️ データ管理</h3>'
+      + '<p style="color:var(--mt);font-size:13px;margin-bottom:12px">以下の操作は取り消せません。慎重に行ってください。</p>'
+      + '<div class="flex-row" style="gap:10px"><button class="btn btn-r" onclick="clearAllData()">🗑 全データ初期化</button>'
+      + '<button class="btn btn-o" onclick="clearLogs()">ログのみ削除</button></div></div>':'');
+}
+
+function saveSettings() {
+  var s = {
+    hospitalName: document.getElementById('st_hname').value,
+    dept: document.getElementById('st_dept').value,
+    director: document.getElementById('st_dir').value,
+    reportingUrl: document.getElementById('st_url').value
+  };
+  DB.set('settings', s);
+  addLog('設定変更', '病院情報を更新');
+  toast('設定を保存しました','s');
+}
+
+function clearAllData() {
+  if (!confirm('全データを初期化しますか？この操作は取り消せません。')) return;
+  if (!confirm('本当に全データを削除しますか？')) return;
+  ['incidents','board_posts','news','rca_list','logs'].forEach(function(k){ localStorage.removeItem('im_'+k); });
+  toast('データを初期化しました。再読み込みします。');
+  setTimeout(function(){ location.reload(); }, 1200);
+}
+
+function clearLogs() {
+  if (!confirm('操作ログを削除しますか？')) return;
+  DB.set('logs', []);
+  toast('ログを削除しました');
+}
+
+// ===== BOOT =====
+window.onload = function() {
+  initData();
+  var sessId = DB.get('session');
+  if (sessId) {
+    var users = DB.get('users') || [];
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].id === sessId) { CU = users[i]; break; }
+    }
+  }
+  if (CU) {
+    startApp();
+  }
+  document.getElementById('lpw').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+};
+</script>
+</body></html>
